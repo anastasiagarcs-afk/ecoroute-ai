@@ -26,7 +26,8 @@ export type EstadoContenedor =
   | "activo"
   | "inactivo"
   | "en_mantenimiento"
-  | "repleto";
+  | "repleto"
+  | "vacio";
 
 export type RolUsuario = "Admin" | "Operador" | "Ciudadano";
 
@@ -121,6 +122,7 @@ export type UpdateUsuario = Partial<Usuario>;
 export type PuntosReciclaje = {
   id: string;
   usuario_id: string;
+  contenedor_id: string | null;
   fecha: string;
   material: MaterialReciclaje;
   cantidad: number;
@@ -221,7 +223,25 @@ export interface Database {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      registrar_contenedor: {
+        Args: {
+          p_numero_identificacion: string;
+          p_tipo_residuo: TipoResiduo;
+          p_nivel_llenado: number;
+          p_lat: number;
+          p_lng: number;
+          p_capacidad?: number;
+          p_zona?: string | null;
+          p_estado?: EstadoContenedor;
+        };
+        Returns: Json;
+      };
+      sembrar_contenedores_demo: {
+        Args: Record<string, never>;
+        Returns: number;
+      };
+    };
     Enums: {
       tipo_residuo: TipoResiduo;
       estado_contenedor: EstadoContenedor;

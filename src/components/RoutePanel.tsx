@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState, useSyncExternalStore } from "react";
+import ConfirmarEliminarContenedorModal from "@/components/ConfirmarEliminarContenedorModal";
+import EditarContenedorModal from "@/components/EditarContenedorModal";
 import {
   UMBRAL_CRITICO,
   esContenedorCritico,
@@ -16,8 +18,30 @@ import {
   suscribirseAlHistorial,
   vaciarHistorial,
 } from "@/lib/historialRutas";
+import { vaciarContenedor } from "@/lib/contenedoresStore";
 import type { RegistroHistorialRuta } from "@/lib/historialRutas";
-import type { Contenedor, UbicacionPunto } from "@/types/schema";
+import type {
+  Contenedor,
+  EstadoContenedor,
+  UbicacionPunto,
+} from "@/types/schema";
+
+const ETIQUETAS_ESTADO: Record<EstadoContenedor, string> = {
+  activo: "Activo",
+  inactivo: "Inactivo",
+  en_mantenimiento: "En mantenimiento",
+  repleto: "Repleto",
+  vacio: "Vacío / Disponible",
+};
+
+const COLORES_ESTADO: Record<EstadoContenedor, string> = {
+  activo: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400",
+  inactivo: "bg-zinc-100 text-zinc-600 dark:bg-zinc-500/10 dark:text-zinc-400",
+  en_mantenimiento:
+    "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400",
+  repleto: "bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400",
+  vacio: "bg-sky-100 text-sky-700 dark:bg-sky-500/10 dark:text-sky-400",
+};
 
 interface RoutePanelProps {
   contenedores: Contenedor[];
@@ -59,6 +83,14 @@ export default function RoutePanel({
   const [ruta, setRuta] = useState<RutaOptimizada | null>(null);
   const [generando, setGenerando] = useState(false);
   const [mostrarHistorial, setMostrarHistorial] = useState(false);
+  const [mostrarGestion, setMostrarGestion] = useState(false);
+  const [contenedorAEditar, setContenedorAEditar] = useState<Contenedor | null>(
+    null
+  );
+  const [contenedorAEliminar, setContenedorAEliminar] = useState<Contenedor | null>(
+    null
+  );
+  const [vaciandoId, setVaciandoId] = useState<string | null>(null);
   const [guardadoOk, setGuardadoOk] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [errorAccion, setErrorAccion] = useState<string | null>(null);
@@ -93,7 +125,12 @@ export default function RoutePanel({
     setGuardadoOk(false);
     setErrorAccion(null);
     try {
-      const nueva = await optimizarRuta(contenedores, { inicio: centroInicial ?? null });
+      if (criticos.length === 0) {
+        throw new Error(
+          `No hay contenedores con nivel ≥ ${UMBRAL_CRITICO}% para trazar la ruta.`
+        );
+      }
+      const nueva = await optimizarRuta(criticos, { inicio: centroInicial ?? null });
       setRuta(nueva);
       onRutaGenerada?.(nueva);
     } catch (error) {
@@ -147,6 +184,18 @@ export default function RoutePanel({
       setErrorAccion(
         error instanceof Error ? error.message : "No se pudo vaciar el historial."
       );
+    }
+  };
+
+  const manejarVaciarContenedor = async (idContenedor: string) => {
+    if (vaciandoId) return;
+    setErrorAccion(null);
+    setVaciandoId(idContenedor);
+    try {
+      await vaciarContenedor(idContenedor);
+      setGuardadoOk(false);
+    } finally {
+      setVaciandoId(null);
     }
   };
 
@@ -212,9 +261,107 @@ export default function RoutePanel({
           )}
         </section>
 
+        <section className="border-t border-zinc-200 pt-4 dark:border-zinc-800">
+          <button
+            type="button"
+            onClick={() => setMostrarGestion((mostrar) => !mostrar)}
+            className="flex items-center gap-2 text-sm font-semibold text-zinc-900 dark:text-zinc-50"
+          >
+            Gestión de contenedores ({contenedores.length})
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">
+              {mostrarGestion ? "▲" : "▼"}
+            </span>
+          </button>
+
+          {mostrarGestion && (
+            <ul className="mt-3 space-y-2">
+              {contenedores.map((contenedor) => {
+                const nivel = Math.round(contenedor.nivel_llenado);
+                const colorNivel =
+                  nivel > UMBRAL_CRITICO ? "bg-red-500" : nivel >= 50 ? "bg-amber-500" : "bg-emerald-600";
+                const esVacio = contenedor.estado === "vacio" || nivel === 0;
+                return (
+                  <li
+                    key={contenedor.id}
+                    className="rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-700"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                          {contenedor.numero_identificacion}
+                        </p>
+                        <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                          {contenedor.zona ?? "Sin zona"} · {contenedor.tipo_residuo}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <span className="flex items-center gap-1 text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                          <span
+                            className={`h-2 w-2 rounded-full ${colorNivel}`}
+                          />
+                          {nivel}%
+                        </span>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${COLORES_ESTADO[contenedor.estado]}`}
+                        >
+                          {ETIQUETAS_ESTADO[contenedor.estado]}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex gap-1.5">
+                      <button
+                        type="button"
+                        disabled={esVacio || vaciandoId === contenedor.id}
+                        title="Vaciar contenedor (0% y Vacío/Disponible)"
+                        onClick={() => manejarVaciarContenedor(contenedor.id)}
+                        className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {vaciandoId === contenedor.id ? "Vaciando…" : "Vaciar"}
+                      </button>
+                      <button
+                        type="button"
+                        title="Editar contenedor"
+                        onClick={() => setContenedorAEditar(contenedor)}
+                        className="inline-flex items-center gap-1 rounded-lg bg-zinc-900 px-2.5 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        title="Eliminar contenedor del mapa y de Supabase"
+                        onClick={() => setContenedorAEliminar(contenedor)}
+                        className="inline-flex items-center gap-1 rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-red-700"
+                      >
+                        <svg
+                          width="11"
+                          height="11"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M3 6h18" />
+                          <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                          <path d="M10 11v6" />
+                          <path d="M14 11v6" />
+                        </svg>
+                        Eliminar
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+
         <button
           onClick={generarRuta}
-          disabled={!hayUbicacion || generando}
+          disabled={!hayUbicacion || generando || criticos.length === 0}
           className="w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {generando ? "Calculando ruta…" : "Generar ruta óptima"}
@@ -391,6 +538,19 @@ export default function RoutePanel({
             ))}
         </section>
       </div>
+
+      {contenedorAEditar && (
+        <EditarContenedorModal
+          contenedor={contenedorAEditar}
+          onCerrar={() => setContenedorAEditar(null)}
+        />
+      )}
+      {contenedorAEliminar && (
+        <ConfirmarEliminarContenedorModal
+          contenedor={contenedorAEliminar}
+          onCerrar={() => setContenedorAEliminar(null)}
+        />
+      )}
     </div>
   );
 }

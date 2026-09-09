@@ -1,7 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { LayerGroup, Map as LeafletMap } from "leaflet";
+import { createRoot, type Root } from "react-dom/client";
+import type {
+  LayerGroup,
+  Map as LeafletMap,
+  Marker as LeafletMarker,
+} from "leaflet";
+import ConfirmarEliminarContenedorModal from "@/components/ConfirmarEliminarContenedorModal";
+import EditarContenedorModal from "@/components/EditarContenedorModal";
+import PopupContenedor from "@/components/PopupContenedor";
+import { vaciarContenedor } from "@/lib/contenedoresStore";
 import type { Contenedor, UbicacionPunto } from "@/types/schema";
 
 import "leaflet/dist/leaflet.css";
@@ -18,6 +27,13 @@ const ZOOM_POR_DEFECTO = 13;
 const ZOOM_MINIMO = 11;
 
 const COLOR_RUTA = "#2563eb";
+
+let moduloLeaflet: typeof import("leaflet") | null = null;
+
+async function obtenerLeaflet(): Promise<typeof import("leaflet")> {
+  moduloLeaflet ??= await import("leaflet");
+  return moduloLeaflet;
+}
 
 interface MapaProps {
   contenedores: Contenedor[];
@@ -36,40 +52,28 @@ function colorPorNivel(nivel: number): string {
   return COLOR_NIVEL_BAJO;
 }
 
-function crearIconoMarcador(L: typeof import("leaflet"), contenedor: Contenedor) {
-  const color = colorPorNivel(contenedor.nivel_llenado);
-  const porcentaje = Math.round(contenedor.nivel_llenado);
+function crearIconoContenedor(
+  L: typeof import("leaflet"),
+  nivelLlenado: number
+) {
+  const nivel = Math.round(nivelLlenado);
+  const color = colorPorNivel(nivelLlenado);
 
   return L.divIcon({
-    className: "",
-    html: `<div style="width:24px;height:24px;border-radius:50%;background:${color};border:3px solid #ffffff;box-shadow:0 2px 6px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:#ffffff;font-family:system-ui,sans-serif;font-size:9px;font-weight:700;line-height:1;">${porcentaje}</div>`,
+    className: "custom-container-marker",
+    html: `<div style="background-color:${color};width:24px;height:24px;border-radius:9999px;border:3px solid #ffffff;box-shadow:0 2px 6px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:#ffffff;font-size:9px;font-weight:700;line-height:1;">${nivel}</div>`,
     iconSize: [24, 24],
     iconAnchor: [12, 12],
-    popupAnchor: [0, -16],
+    popupAnchor: [0, -18],
   });
 }
 
-function crearContenidoPopup(contenedor: Contenedor): string {
-  const nivel = contenedor.nivel_llenado;
-  const color = colorPorNivel(nivel);
-  const ubicacion = contenedor.ubicacion
-    ? `${contenedor.ubicacion.lat.toFixed(5)}, ${contenedor.ubicacion.lng.toFixed(5)}`
-    : "Sin coordenadas";
-  const ultimaLectura = contenedor.ultima_lectura
-    ? new Date(contenedor.ultima_lectura).toLocaleString("es-ES")
-    : "Sin lecturas";
-
-  return `
-    <div style="font-family:system-ui,-apple-system,sans-serif;font-size:12px;line-height:1.6;min-width:220px;">
-      <div style="font-size:14px;font-weight:700;margin-bottom:4px;">${contenedor.numero_identificacion}</div>
-      <div><strong>ID:</strong> ${contenedor.id}</div>
-      <div><strong>Ubicación:</strong> ${ubicacion}</div>
-      <div><strong>Tipo de residuo:</strong> ${contenedor.tipo_residuo}</div>
-      <div><strong>Zona:</strong> ${contenedor.zona ?? "Sin zona"}</div>
-      <div><strong>Nivel de llenado:</strong> <span style="color:${color};font-weight:700;">${Math.round(nivel)}%</span></div>
-      <div><strong>Última lectura:</strong> ${ultimaLectura}</div>
-      <div><strong>Estado:</strong> ${contenedor.estado}</div>
-    </div>`;
+function coordenadasValidasDe(contenedor: Contenedor): UbicacionPunto | null {
+  if (!contenedor.ubicacion) return null;
+  const lat = parseFloat(String(contenedor.ubicacion.lat));
+  const lng = parseFloat(String(contenedor.ubicacion.lng));
+  if (Number.isNaN(lat) || Number.isNaN(lng)) return null;
+  return { lat, lng };
 }
 
 function Leyenda() {
@@ -95,7 +99,7 @@ function Leyenda() {
   );
 }
 
-export default function Map({
+function MapaContenedores({
   contenedores,
   centro = CENTRO_POR_DEFECTO,
   zoom = ZOOM_POR_DEFECTO,
@@ -107,21 +111,58 @@ export default function Map({
 }: MapaProps) {
   const contenedorRef = useRef<HTMLDivElement>(null);
   const mapaRef = useRef<LeafletMap | null>(null);
+  const capaMarcadoresRef = useRef<LayerGroup | null>(null);
+  const capaRutaRef = useRef<LayerGroup | null>(null);
   const centroInicialRef = useRef(centro);
   const zoomInicialRef = useRef(zoom);
   const onSelectRef = useRef(onSelectContenedor);
+  const ajusteInicialRef = useRef(false);
+  const marcadoresRef = useRef<Map<string, LeafletMarker>>(new Map());
+  const datosRef = useRef<Map<string, Contenedor>>(new Map());
+  const raicesPopupRef = useRef<Map<string, Root>>(new Map());
+  const popupAbiertoRef = useRef<string | null>(null);
   const [mapaListo, setMapaListo] = useState(false);
+  const [contenedorAEditar, setContenedorAEditar] = useState<Contenedor | null>(
+    null
+  );
+  const [contenedorAEliminar, setContenedorAEliminar] = useState<Contenedor | null>(
+    null
+  );
 
   useEffect(() => {
     onSelectRef.current = onSelectContenedor;
   }, [onSelectContenedor]);
 
+  function renderPopupContenido(id: string): void {
+    const contenedor = datosRef.current.get(id);
+    const raiz = raicesPopupRef.current.get(id);
+    if (!contenedor || !raiz || popupAbiertoRef.current !== id) return;
+
+    raiz.render(
+      <PopupContenedor
+        contenedor={contenedor}
+        onVaciar={() => vaciarContenedor(contenedor.id)}
+        onEditar={() => setContenedorAEditar(contenedor)}
+        onEliminar={() => setContenedorAEliminar(contenedor)}
+      />
+    );
+  }
+
+  function limpiarPopupAbierto(id: string): void {
+    if (popupAbiertoRef.current !== id) return;
+    popupAbiertoRef.current = null;
+    raicesPopupRef.current.get(id)?.render(null);
+  }
+
   useEffect(() => {
     let activo = true;
     let manejarResize: (() => void) | null = null;
+    const marcadores = marcadoresRef.current;
+    const datos = datosRef.current;
+    const raices = raicesPopupRef.current;
 
     async function inicializarMapa() {
-      const L = await import("leaflet");
+      const L = await obtenerLeaflet();
       if (!activo || !contenedorRef.current || mapaRef.current) return;
 
       const mapa = L.map(contenedorRef.current, {
@@ -137,6 +178,9 @@ export default function Map({
         attribution:
           '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(mapa);
+
+      capaMarcadoresRef.current = L.layerGroup().addTo(mapa);
+      capaRutaRef.current = L.layerGroup().addTo(mapa);
 
       manejarResize = () => mapa.invalidateSize();
       window.addEventListener("resize", manejarResize);
@@ -154,69 +198,142 @@ export default function Map({
       }
       mapaRef.current?.remove();
       mapaRef.current = null;
-      setMapaListo(false);
+      capaMarcadoresRef.current = null;
+      capaRutaRef.current = null;
+      for (const raiz of raices.values()) {
+        raiz.unmount();
+      }
+      raices.clear();
+      marcadores.clear();
+      datos.clear();
+      popupAbiertoRef.current = null;
+      ajusteInicialRef.current = false;
     };
   }, []);
 
   useEffect(() => {
-    if (!mapaListo || !mapaRef.current) return;
+    if (!mapaListo || !capaMarcadoresRef.current || !mapaRef.current) return;
 
     let activo = true;
-    let capaMarcadores: LayerGroup | null = null;
 
-    async function dibujarMarcadores() {
-      const L = await import("leaflet");
-      if (!activo || !mapaRef.current) return;
+    async function sincronizarMarcadores() {
+      const L = await obtenerLeaflet();
+      if (!activo || !capaMarcadoresRef.current || !mapaRef.current) return;
 
-      const mapa = mapaRef.current;
-      capaMarcadores = L.layerGroup().addTo(mapa);
+      const capa = capaMarcadoresRef.current;
+      const idsVigentes = new Set(contenedores.map((contenedor) => contenedor.id));
+      const coordenadasValidas: UbicacionPunto[] = [];
 
       for (const contenedor of contenedores) {
-        if (!contenedor.ubicacion) continue;
+        const coordenadas = coordenadasValidasDe(contenedor);
+        const marcador = marcadoresRef.current.get(contenedor.id);
+        const previo = datosRef.current.get(contenedor.id);
 
-        const marcador = L.marker(
-          [contenedor.ubicacion.lat, contenedor.ubicacion.lng],
-          {
-            icon: crearIconoMarcador(L, contenedor),
-            title: contenedor.numero_identificacion,
+        if (marcador) {
+          if (
+            coordenadas &&
+            (marcador.getLatLng().lat !== coordenadas.lat ||
+              marcador.getLatLng().lng !== coordenadas.lng)
+          ) {
+            marcador.setLatLng([coordenadas.lat, coordenadas.lng]);
           }
-        )
-          .bindPopup(crearContenidoPopup(contenedor))
-          .on("click", () => onSelectRef.current?.(contenedor));
+          if (!previo || previo.nivel_llenado !== contenedor.nivel_llenado) {
+            marcador.setIcon(crearIconoContenedor(L, contenedor.nivel_llenado));
+          }
+          datosRef.current.set(contenedor.id, contenedor);
+        } else if (coordenadas) {
+          const id = contenedor.id;
+          const contenedorPopup = document.createElement("div");
+          const raizPopup = createRoot(contenedorPopup);
+          raicesPopupRef.current.set(id, raizPopup);
+          const marcadorNuevo = L.marker(
+            [coordenadas.lat, coordenadas.lng],
+            {
+              icon: crearIconoContenedor(L, contenedor.nivel_llenado),
+              title: contenedor.numero_identificacion,
+            }
+          )
+            .bindPopup(contenedorPopup, {
+              minWidth: 260,
+              maxWidth: 300,
+              className: "custom-leaflet-popup",
+            })
+            .on("click", () => {
+              const actual = datosRef.current.get(id);
+              if (actual) onSelectRef.current?.(actual);
+            })
+            .on("popupopen", () => {
+              popupAbiertoRef.current = id;
+              renderPopupContenido(id);
+            })
+            .on("popupclose", () => {
+              limpiarPopupAbierto(id);
+            })
+            .addTo(capa);
 
-        marcador.addTo(capaMarcadores!);
+          marcadoresRef.current.set(id, marcadorNuevo);
+          datosRef.current.set(id, contenedor);
+        }
+
+        if (coordenadas) coordenadasValidas.push(coordenadas);
       }
+
+      for (const [id, marcador] of marcadoresRef.current) {
+        if (idsVigentes.has(id)) continue;
+        raicesPopupRef.current.get(id)?.unmount();
+        raicesPopupRef.current.delete(id);
+        if (popupAbiertoRef.current === id) popupAbiertoRef.current = null;
+        marcador.remove();
+        marcadoresRef.current.delete(id);
+        datosRef.current.delete(id);
+      }
+
+      if (!ajusteInicialRef.current && coordenadasValidas.length > 0) {
+        ajusteInicialRef.current = true;
+        const mapa = mapaRef.current;
+        if (!mapa) return;
+        mapa.fitBounds(
+          L.latLngBounds(
+            coordenadasValidas.map(
+              (punto) => [punto.lat, punto.lng] as [number, number]
+            )
+          ),
+          { padding: [40, 40] }
+        );
+        mapa.invalidateSize();
+      }
+
+      const idAbierto = popupAbiertoRef.current;
+      if (idAbierto) renderPopupContenido(idAbierto);
     }
 
-    dibujarMarcadores();
+    sincronizarMarcadores();
 
     return () => {
       activo = false;
-      capaMarcadores?.remove();
     };
   }, [contenedores, mapaListo]);
 
   useEffect(() => {
-    if (!mapaListo || !mapaRef.current) return;
+    if (!mapaListo || !capaRutaRef.current || !mapaRef.current) return;
 
     let activo = true;
-    let capaRuta: LayerGroup | null = null;
 
     async function dibujarRuta() {
-      const L = await import("leaflet");
-      if (!activo || !mapaRef.current) return;
+      const L = await obtenerLeaflet();
+      if (!activo || !capaRutaRef.current || !mapaRef.current) return;
+
+      const capa = capaRutaRef.current;
+      capa.clearLayers();
       if (rutaPuntos.length < 2) return;
 
-      const mapa = mapaRef.current;
       const latlngs = rutaPuntos.map((punto) => [punto.lat, punto.lng] as [number, number]);
-
-      capaRuta = L.layerGroup().addTo(mapa);
 
       L.polyline(latlngs, {
         color: COLOR_RUTA,
         weight: 4,
         opacity: 0.85,
-      }).addTo(capaRuta);
+      }).addTo(capa);
 
       L.circleMarker(latlngs[0], {
         radius: 7,
@@ -224,7 +341,7 @@ export default function Map({
         weight: 2,
         fillColor: "#ffffff",
         fillOpacity: 1,
-      }).addTo(capaRuta);
+      }).addTo(capa);
 
       L.circleMarker(latlngs[latlngs.length - 1], {
         radius: 7,
@@ -232,10 +349,10 @@ export default function Map({
         weight: 3,
         fillColor: COLOR_RUTA,
         fillOpacity: 1,
-      }).addTo(capaRuta);
+      }).addTo(capa);
 
       if (ajustarVistaARuta) {
-        mapa.fitBounds(L.latLngBounds(latlngs), { padding: [40, 40] });
+        mapaRef.current.fitBounds(L.latLngBounds(latlngs), { padding: [40, 40] });
       }
     }
 
@@ -243,7 +360,6 @@ export default function Map({
 
     return () => {
       activo = false;
-      capaRuta?.remove();
     };
   }, [rutaPuntos, mapaListo, ajustarVistaARuta]);
 
@@ -256,6 +372,21 @@ export default function Map({
       )}
       <div ref={contenedorRef} className="h-full w-full" />
       {mapaListo && <Leyenda />}
+
+      {contenedorAEditar && (
+        <EditarContenedorModal
+          contenedor={contenedorAEditar}
+          onCerrar={() => setContenedorAEditar(null)}
+        />
+      )}
+      {contenedorAEliminar && (
+        <ConfirmarEliminarContenedorModal
+          contenedor={contenedorAEliminar}
+          onCerrar={() => setContenedorAEliminar(null)}
+        />
+      )}
     </div>
   );
 }
+
+export default MapaContenedores;
