@@ -191,24 +191,24 @@ function MapaContenedores({
 
     inicializarMapa();
 
-    return () => {
-      activo = false;
-      if (manejarResize) {
-        window.removeEventListener("resize", manejarResize);
-      }
-      mapaRef.current?.remove();
-      mapaRef.current = null;
-      capaMarcadoresRef.current = null;
-      capaRutaRef.current = null;
-      for (const raiz of raices.values()) {
-        raiz.unmount();
-      }
-      raices.clear();
-      marcadores.clear();
-      datos.clear();
-      popupAbiertoRef.current = null;
-      ajusteInicialRef.current = false;
-    };
+return () => {
+        activo = false;
+        if (manejarResize) {
+          window.removeEventListener("resize", manejarResize);
+        }
+        mapaRef.current?.remove();
+        mapaRef.current = null;
+        capaMarcadoresRef.current = null;
+        capaRutaRef.current = null;
+        for (const raiz of raices.values()) {
+          queueMicrotask(() => raiz.unmount());
+        }
+        raices.clear();
+        marcadores.clear();
+        datos.clear();
+        popupAbiertoRef.current = null;
+        ajusteInicialRef.current = false;
+      };
   }, []);
 
   useEffect(() => {
@@ -280,7 +280,8 @@ function MapaContenedores({
 
       for (const [id, marcador] of marcadoresRef.current) {
         if (idsVigentes.has(id)) continue;
-        raicesPopupRef.current.get(id)?.unmount();
+        const raiz = raicesPopupRef.current.get(id);
+        if (raiz) queueMicrotask(() => raiz.unmount());
         raicesPopupRef.current.delete(id);
         if (popupAbiertoRef.current === id) popupAbiertoRef.current = null;
         marcador.remove();

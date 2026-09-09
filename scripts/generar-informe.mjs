@@ -26,6 +26,8 @@ const DESCRIPCIONES_COMPONENTES = {
     "Diálogo de confirmación para eliminar un contenedor en Supabase y quitar su marcador del mapa.",
   "PopupContenedor.tsx":
     "Contenido en React del popup de cada marcador: información y estado del contenedor e icono con acciones Vaciar (0% y estado Vacío/Disponible), Editar y Eliminar.",
+  "ToastHost.tsx":
+    "Host global de notificaciones (toasts) usando useSyncExternalStore; posicionado sobre el mapa con animación de entrada y colores por tipo (éxito, error, info).",
 };
 
 const DESCRIPCIONES_LIB = {
@@ -34,13 +36,17 @@ const DESCRIPCIONES_LIB = {
   "gamificacion.ts":
     "Lógica pura de gamificación: puntos por kg según material, niveles de ciudadano, progreso y catálogo de recompensas.",
   "reciclajeService.ts":
-    "Servicio Supabase del módulo de reciclaje: usuario ciudadano actual, registro de entregas (insert PuntosReciclaje + update Usuarios) y entregas recientes.",
+    "Servicio Supabase del módulo de reciclaje: usuario ciudadano actual, registro de entregas con webhook n8n (insert PuntosReciclaje + update Usuarios) y entregas recientes.",
   "historialRutas.ts":
     "Almacén de historial de rutas con persistencia en Supabase (tabla HistorialRutas), reintentos y respaldo en localStorage.",
   "contenedoresStore.ts":
     "Almacén de contenedores: carga y semilla desde Supabase, normalización de ubicación (objeto, GeoJSON, EWKT o WKB/EWKB hexadecimal con parseFloat), datos de respaldo en localStorage y registro, vaciado (0% y estado vacio), edición y eliminación en tiempo real.",
   "supabaseClient.ts":
     "Cliente Supabase del navegador: sanitización de variables de entorno, validación de configuración y detección del modo de respaldo.",
+  "toastStore.ts":
+    "Mini-store de notificaciones (toasts) con patrón useSyncExternalStore: suscripción, snapshot, auto-descarte a 4.5s y descarte manual por ID.",
+  "n8nWebhook.ts":
+    "Cliente para webhook n8n: obtiene URL desde env, POST JSON con timeout 6s (AbortController), payload {usuario_id, contenedor_id, material, peso_kg, timestamp}, fallback a null si falla.",
 };
 
 function listarArchivos(directorio, extension, recursivo = false) {
@@ -137,9 +143,29 @@ const paginas = listarArchivos("app", ".tsx", true).filter((ruta) =>
 const migraciones = listarArchivos("supabase/migrations", ".sql");
 const tablas = tablasDeMigraciones();
 
+// Función para extraer la sección manual preservada del archivo existente
+function extraerSeccionManual(rutaArchivo) {
+  const marcador = "<!-- MANUAL_CHANGES_START -->";
+  try {
+    const contenido = readFileSync(rutaArchivo, "utf8");
+    const idx = contenido.indexOf(marcador);
+    if (idx !== -1) {
+      // Retornar contenido DESPUÉS del marcador (sin incluir el marcador)
+      return contenido.slice(idx + marcador.length).trimStart();
+    }
+  } catch {
+    // Archivo no existe o error de lectura
+  }
+  return "";
+}
+
+const BITACORA_PATH = join(RUTA_RAIZ, "BITACORA.md");
+const seccionManual = extraerSeccionManual(BITACORA_PATH);
+
 const secciones = [
-  "# Informe del Proyecto — EcoRoute AI",
+  "# Bitácora del Proyecto — EcoRoute AI",
   `> Documento generado automáticamente el ${fechaHoy()} por \`npm run informe\`. No editar a mano: se regenera desde el código para mantenerse al día.`,
+  "> **Nota**: Este archivo es el registro cronológico automático. Para el informe académico formal, ver `INFORME_PROYECTO.md`.",
   "",
   "## 1. Arquitectura y Stack Tecnológico",
   "",
@@ -221,14 +247,18 @@ const secciones = [
   "```",
   "",
   "2. Revisa el diff de `INFORME_PROYECTO.md` y confírmalo en tu commit.",
+  "",
+  "<!-- MANUAL_CHANGES_START -->",
 ];
 
+const contenidoFinal = secciones.join("\n") + "\n" + seccionManual;
+
 writeFileSync(
-  join(RUTA_RAIZ, "INFORME_PROYECTO.md"),
-  secciones.join("\n"),
+  BITACORA_PATH,
+  contenidoFinal,
   "utf8"
 );
 
 console.log(
-  `INFORME_PROYECTO.md regenerado: ${componentes.length} componentes, ${librerias.length} módulos, ${paginas.length} páginas, ${migraciones.length} migraciones, ${tablas.length} tablas.`
+  `BITACORA.md regenerado: ${componentes.length} componentes, ${librerias.length} módulos, ${paginas.length} páginas, ${migraciones.length} migraciones, ${tablas.length} tablas.`
 );

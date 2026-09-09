@@ -3,11 +3,13 @@
 import { useSyncExternalStore } from "react";
 import {
   descartarToast,
-  obtenerSnapshotServidorToasts,
   obtenerSnapshotToasts,
   suscribirseAToasts,
   type TipoNotificacionToast,
+  type NotificacionToast,
 } from "@/lib/toastStore";
+
+const SNAPSHOT_SERVIDOR_VACIO: NotificacionToast[] = [];
 
 interface EstiloToast {
   icono: string;
@@ -44,7 +46,7 @@ export default function ToastHost() {
   const notificaciones = useSyncExternalStore(
     suscribirseAToasts,
     obtenerSnapshotToasts,
-    obtenerSnapshotServidorToasts
+    () => SNAPSHOT_SERVIDOR_VACIO
   );
 
   return (
