@@ -1,5 +1,7 @@
-import type { Contenedor } from "@/types/schema";
-import Map from "@/components/Map";
+import type { Contenedor, UbicacionPunto } from "@/types/schema";
+import RoutesMapView from "@/components/RoutesMapView";
+
+const CENTRO_CIUDAD: UbicacionPunto = { lat: 8.34739, lng: -62.65371 };
 
 const contenedoresMock: Contenedor[] = [
   {
@@ -178,10 +180,8 @@ export default function Home() {
         />
       </section>
 
-      <section className="flex flex-1 items-stretch">
-        <div className="h-[65vh] w-full overflow-hidden rounded-2xl border border-zinc-200 shadow-sm dark:border-zinc-800">
-          <Map contenedores={contenedoresMock} />
-        </div>
+      <section className="flex flex-1 justify-center">
+        <RoutesMapView contenedores={contenedoresMock} centro={CENTRO_CIUDAD} />
       </section>
     </main>
   );

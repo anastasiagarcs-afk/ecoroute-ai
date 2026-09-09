@@ -17,6 +17,8 @@ const CENTRO_POR_DEFECTO: UbicacionPunto = { lat: 8.34739, lng: -62.65371 };
 const ZOOM_POR_DEFECTO = 13;
 const ZOOM_MINIMO = 11;
 
+const COLOR_RUTA = "#2563eb";
+
 interface MapaProps {
   contenedores: Contenedor[];
   centro?: UbicacionPunto;
@@ -24,6 +26,8 @@ interface MapaProps {
   altura?: string | number;
   className?: string;
   onSelectContenedor?: (contenedor: Contenedor) => void;
+  rutaPuntos?: UbicacionPunto[];
+  ajustarVistaARuta?: boolean;
 }
 
 function colorPorNivel(nivel: number): string {
@@ -98,6 +102,8 @@ export default function Map({
   altura = "100%",
   className = "",
   onSelectContenedor,
+  rutaPuntos = [],
+  ajustarVistaARuta = true,
 }: MapaProps) {
   const contenedorRef = useRef<HTMLDivElement>(null);
   const mapaRef = useRef<LeafletMap | null>(null);
@@ -189,6 +195,57 @@ export default function Map({
       capaMarcadores?.remove();
     };
   }, [contenedores, mapaListo]);
+
+  useEffect(() => {
+    if (!mapaListo || !mapaRef.current) return;
+
+    let activo = true;
+    let capaRuta: LayerGroup | null = null;
+
+    async function dibujarRuta() {
+      const L = await import("leaflet");
+      if (!activo || !mapaRef.current) return;
+      if (rutaPuntos.length < 2) return;
+
+      const mapa = mapaRef.current;
+      const latlngs = rutaPuntos.map((punto) => [punto.lat, punto.lng] as [number, number]);
+
+      capaRuta = L.layerGroup().addTo(mapa);
+
+      L.polyline(latlngs, {
+        color: COLOR_RUTA,
+        weight: 4,
+        opacity: 0.85,
+      }).addTo(capaRuta);
+
+      L.circleMarker(latlngs[0], {
+        radius: 7,
+        color: COLOR_RUTA,
+        weight: 2,
+        fillColor: "#ffffff",
+        fillOpacity: 1,
+      }).addTo(capaRuta);
+
+      L.circleMarker(latlngs[latlngs.length - 1], {
+        radius: 7,
+        color: "#ffffff",
+        weight: 3,
+        fillColor: COLOR_RUTA,
+        fillOpacity: 1,
+      }).addTo(capaRuta);
+
+      if (ajustarVistaARuta) {
+        mapa.fitBounds(L.latLngBounds(latlngs), { padding: [40, 40] });
+      }
+    }
+
+    dibujarRuta();
+
+    return () => {
+      activo = false;
+      capaRuta?.remove();
+    };
+  }, [rutaPuntos, mapaListo, ajustarVistaARuta]);
 
   return (
     <div className={`relative h-full w-full overflow-hidden ${className}`} style={{ height: altura }}>

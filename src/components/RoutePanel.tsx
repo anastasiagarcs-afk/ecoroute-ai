@@ -1,0 +1,396 @@
+"use client";
+
+import { useMemo, useState, useSyncExternalStore } from "react";
+import {
+  UMBRAL_CRITICO,
+  esContenedorCritico,
+  optimizarRuta,
+} from "@/lib/routeOptimizer";
+import type { RutaOptimizada } from "@/lib/routeOptimizer";
+import {
+  obtenerSnapshotEstadoHistorial,
+  obtenerSnapshotHistorial,
+  obtenerSnapshotServidorEstadoHistorial,
+  obtenerSnapshotServidorHistorial,
+  registrarRutaEjecutada,
+  suscribirseAlHistorial,
+  vaciarHistorial,
+} from "@/lib/historialRutas";
+import type { RegistroHistorialRuta } from "@/lib/historialRutas";
+import type { Contenedor, UbicacionPunto } from "@/types/schema";
+
+interface RoutePanelProps {
+  contenedores: Contenedor[];
+  centroInicial?: UbicacionPunto;
+  onRutaGenerada?: (ruta: RutaOptimizada | null) => void;
+  onCargarRutaHistorial?: (registro: RegistroHistorialRuta) => void;
+  onSalirRutaHistorial?: () => void;
+  rutaHistorialId?: string | null;
+}
+
+function formatoDistancia(km: number): string {
+  return `${km.toFixed(2)} km`;
+}
+
+function formatoTiempo(minutos: number): string {
+  if (!Number.isFinite(minutos) || minutos < 1) return "0 min";
+  const horas = Math.floor(minutos / 60);
+  const minutosRestantes = Math.round(minutos % 60);
+  return horas > 0 ? `${horas} h ${minutosRestantes} min` : `${minutosRestantes} min`;
+}
+
+function DatoResumen({ etiqueta, valor }: { etiqueta: string; valor: string }) {
+  return (
+    <div className="rounded-lg bg-zinc-50 p-2 text-center dark:bg-zinc-800/50">
+      <p className="text-sm font-bold text-zinc-900 dark:text-zinc-50">{valor}</p>
+      <p className="text-xs text-zinc-500 dark:text-zinc-400">{etiqueta}</p>
+    </div>
+  );
+}
+
+export default function RoutePanel({
+  contenedores,
+  centroInicial,
+  onRutaGenerada,
+  onCargarRutaHistorial,
+  onSalirRutaHistorial,
+  rutaHistorialId = null,
+}: RoutePanelProps) {
+  const [ruta, setRuta] = useState<RutaOptimizada | null>(null);
+  const [generando, setGenerando] = useState(false);
+  const [mostrarHistorial, setMostrarHistorial] = useState(false);
+  const [guardadoOk, setGuardadoOk] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+  const [errorAccion, setErrorAccion] = useState<string | null>(null);
+
+  const historial = useSyncExternalStore(
+    suscribirseAlHistorial,
+    obtenerSnapshotHistorial,
+    obtenerSnapshotServidorHistorial
+  );
+
+  const estadoHistorial = useSyncExternalStore(
+    suscribirseAlHistorial,
+    obtenerSnapshotEstadoHistorial,
+    obtenerSnapshotServidorEstadoHistorial
+  );
+
+  const criticos = useMemo(
+    () =>
+      contenedores
+        .filter(esContenedorCritico)
+        .sort((a, b) => b.nivel_llenado - a.nivel_llenado),
+    [contenedores]
+  );
+
+  const hayUbicacion = useMemo(
+    () => contenedores.some((contenedor) => contenedor.ubicacion !== null),
+    [contenedores]
+  );
+
+  const generarRuta = async () => {
+    setGenerando(true);
+    setGuardadoOk(false);
+    setErrorAccion(null);
+    try {
+      const nueva = await optimizarRuta(contenedores, { inicio: centroInicial ?? null });
+      setRuta(nueva);
+      onRutaGenerada?.(nueva);
+    } catch (error) {
+      setErrorAccion(
+        error instanceof Error ? error.message : "No se pudo calcular la ruta."
+      );
+    } finally {
+      setGenerando(false);
+    }
+  };
+
+  const limpiarRuta = () => {
+    setRuta(null);
+    setGuardadoOk(false);
+    onRutaGenerada?.(null);
+  };
+
+  const nombreContenedorPorId = (id: string) =>
+    contenedores.find((contenedor) => contenedor.id === id)?.numero_identificacion ??
+    id.slice(0, 8);
+
+  const guardarRuta = async () => {
+    if (!ruta || guardando) return;
+    setGuardando(true);
+    setGuardadoOk(false);
+    setErrorAccion(null);
+    try {
+      await registrarRutaEjecutada({
+        distanciaKm: ruta.distanciaTotalKm,
+        tiempoMin: ruta.tiempoEstimadoMin,
+        contenedores: ruta.puntos.map((punto) => punto.contenedor),
+        fuenteRuta: ruta.fuenteRuta,
+        geometria: ruta.geometria,
+      });
+      setGuardadoOk(true);
+    } catch (error) {
+      setErrorAccion(
+        error instanceof Error ? error.message : "No se pudo guardar la ruta."
+      );
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const manejarVaciarHistorial = async () => {
+    if (estadoHistorial.estadoCarga === "cargando") return;
+    setErrorAccion(null);
+    try {
+      await vaciarHistorial();
+    } catch (error) {
+      setErrorAccion(
+        error instanceof Error ? error.message : "No se pudo vaciar el historial."
+      );
+    }
+  };
+
+  const cargarRutaHistorial = (registro: RegistroHistorialRuta) => {
+    if (registro.id === rutaHistorialId) {
+      onSalirRutaHistorial?.();
+    } else {
+      onCargarRutaHistorial?.(registro);
+    }
+  };
+
+  return (
+    <div className="flex max-h-[80vh] w-full flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900 lg:max-h-[65vh]">
+      <header className="flex items-center justify-between border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
+        <div>
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+            Panel de rutas y alertas
+          </h2>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            Prioriza contenedores con nivel ≥ {UMBRAL_CRITICO}%
+          </p>
+        </div>
+        {ruta && (
+          <button
+            onClick={limpiarRuta}
+            className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            Limpiar ruta
+          </button>
+        )}
+      </header>
+
+      <div className="flex-1 space-y-5 overflow-y-auto p-5">
+        <section>
+          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+            Contenedores en estado crítico ({criticos.length})
+          </h3>
+          {criticos.length === 0 ? (
+            <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+              No hay contenedores con nivel ≥ {UMBRAL_CRITICO}%.
+            </p>
+          ) : (
+            <ul className="mt-2 space-y-2">
+              {criticos.map((contenedor) => (
+                <li
+                  key={contenedor.id}
+                  className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-3 py-2 dark:border-red-900/50 dark:bg-red-950/30"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                      {contenedor.numero_identificacion}
+                    </p>
+                    <p className="text-xs text-red-600/80 dark:text-red-400/80">
+                      {contenedor.zona ?? "Sin zona"} · {contenedor.tipo_residuo}
+                    </p>
+                  </div>
+                  <span className="rounded-md bg-red-600 px-2 py-0.5 text-xs font-bold text-white">
+                    {Math.round(contenedor.nivel_llenado)}%
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <button
+          onClick={generarRuta}
+          disabled={!hayUbicacion || generando}
+          className="w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {generando ? "Calculando ruta…" : "Generar ruta óptima"}
+        </button>
+
+        {errorAccion && (
+          <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-500/10 dark:text-red-400">
+            {errorAccion}
+          </p>
+        )}
+
+        {ruta && (
+          <section className="space-y-3">
+            <div className="grid grid-cols-3 gap-2">
+              <DatoResumen
+                etiqueta="Distancia total"
+                valor={formatoDistancia(ruta.distanciaTotalKm)}
+              />
+              <DatoResumen
+                etiqueta="Tiempo real (OSRM)"
+                valor={formatoTiempo(ruta.tiempoEstimadoMin)}
+              />
+              <DatoResumen
+                etiqueta="Atendidos"
+                valor={`${ruta.contenedoresAtendidos}`}
+              />
+            </div>
+
+            {ruta.fuenteRuta === "linea_recta" && (
+              <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-500/10 dark:text-amber-400">
+                OSRM no disponible: distancia estimada en línea recta.
+              </p>
+            )}
+
+            <button
+              onClick={guardarRuta}
+              disabled={guardando}
+              className="w-full rounded-xl border border-emerald-600 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-emerald-500/50 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20"
+            >
+              {guardando ? "Guardando…" : "Guardar / Confirmar Ruta"}
+            </button>
+
+            {guardadoOk && (
+              <p className="rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
+                Ruta guardada en el historial.
+              </p>
+            )}
+
+            <ol className="space-y-2">
+              {ruta.puntos.map(({ contenedor, distanciaDesdeAnteriorKm, distanciaAcumuladaKm }, indice) => (
+                <li
+                  key={contenedor.id}
+                  className="flex items-center justify-between rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-700"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+                      {indice + 1}
+                    </span>
+                    <div>
+                      <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                        {contenedor.numero_identificacion}
+                      </p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                        {contenedor.zona ?? "Sin zona"} ·{" "}
+                        <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+                          {Math.round(contenedor.nivel_llenado)}%
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                    {indice === 0
+                      ? formatoDistancia(distanciaAcumuladaKm)
+                      : `+${formatoDistancia(distanciaDesdeAnteriorKm)}`}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
+
+        <section className="border-t border-zinc-200 pt-4 dark:border-zinc-800">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setMostrarHistorial((mostrar) => !mostrar)}
+              className="flex items-center gap-2 text-sm font-semibold text-zinc-900 dark:text-zinc-50"
+            >
+              Historial de rutas ejecutadas ({historial.length})
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                {mostrarHistorial ? "▲" : "▼"}
+              </span>
+            </button>
+            {historial.length > 0 && (
+              <button
+                onClick={manejarVaciarHistorial}
+                disabled={estadoHistorial.estadoCarga === "cargando"}
+                className="text-xs font-medium text-zinc-500 transition-colors hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50 dark:text-zinc-400 dark:hover:text-red-400"
+              >
+                Vaciar
+              </button>
+            )}
+          </div>
+
+          {mostrarHistorial &&
+            (estadoHistorial.estadoCarga === "cargando" ? (
+              <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+                Cargando historial desde Supabase…
+              </p>
+            ) : estadoHistorial.estadoCarga === "error" ? (
+              <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-500/10 dark:text-red-400">
+                No se pudo cargar el historial: {estadoHistorial.mensajeError}
+              </p>
+            ) : historial.length === 0 ? (
+              <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+                Todavía no hay rutas confirmadas. Genera y guarda una ruta para registrarla aquí.
+              </p>
+            ) : (
+              <ol className="mt-3 space-y-2">
+                {historial.map((registro) => (
+                  <li
+                    key={registro.id}
+                    className={`rounded-lg border px-3 py-2 ${
+                      registro.id === rutaHistorialId
+                        ? "border-emerald-400 bg-emerald-50/70 dark:border-emerald-500/50 dark:bg-emerald-500/10"
+                        : "border-zinc-200 dark:border-zinc-700"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                        {registro.nombre}
+                      </p>
+                      <span className="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">
+                        {new Date(registro.fecha_ejecucion).toLocaleString("es-VE")}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex items-center gap-3 text-xs text-zinc-500 dark:text-zinc-400">
+                      <span>{formatoDistancia(registro.distanciaKm)}</span>
+                      <span>{formatoTiempo(registro.tiempoMin)}</span>
+                      <span>{registro.contenedoresAtendidos.length} contenedores</span>
+                    </div>
+                    {registro.contenedoresAtendidos.length > 0 && (
+                      <p className="mt-1 truncate text-xs text-zinc-400 dark:text-zinc-500">
+                        {registro.contenedoresAtendidos
+                          .slice(0, 3)
+                          .map(nombreContenedorPorId)
+                          .join(", ")}
+                        {registro.contenedoresAtendidos.length > 3 ? "…" : ""}
+                      </p>
+                    )}
+                    {registro.fuenteRuta === "linea_recta" && (
+                      <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                        Distancia estimada (OSRM no disponible)
+                      </p>
+                    )}
+                    <button
+                      onClick={() => cargarRutaHistorial(registro)}
+                      disabled={
+                        !Array.isArray(registro.geometria) ||
+                        registro.geometria.length < 2
+                      }
+                      className={`mt-2 inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                        registro.id === rutaHistorialId
+                          ? "border-red-600 bg-red-600 text-white hover:bg-red-700 dark:border-red-500 dark:bg-red-600 dark:hover:bg-red-700"
+                          : "border-zinc-200 text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                      }`}
+                    >
+                      {registro.id === rutaHistorialId
+                        ? "Ocultar ruta"
+                        : "Ver en mapa"}
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            ))}
+        </section>
+      </div>
+    </div>
+  );
+}

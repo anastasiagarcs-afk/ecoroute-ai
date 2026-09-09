@@ -44,7 +44,7 @@ export type TipoNotificacion =
   | "jornada"
   | "sistema";
 
-export interface Contenedor {
+export type Contenedor = {
   id: string;
   numero_identificacion: string;
   ubicacion: UbicacionPunto | null;
@@ -64,7 +64,7 @@ export type InsertContenedor = Omit<Contenedor, "id" | "created_at"> & {
 
 export type UpdateContenedor = Partial<Contenedor>;
 
-export interface LecturaSensor {
+export type LecturaSensor = {
   id: string;
   contenedor_id: string;
   nivel_llenado: number;
@@ -81,7 +81,7 @@ export type InsertLecturaSensor = Omit<LecturaSensor, "id" | "created_at"> & {
 
 export type UpdateLecturaSensor = Partial<LecturaSensor>;
 
-export interface Ruta {
+export type Ruta = {
   id: string;
   nombre: string;
   zona: string | null;
@@ -100,7 +100,7 @@ export type InsertRuta = Omit<Ruta, "id" | "created_at"> & {
 
 export type UpdateRuta = Partial<Ruta>;
 
-export interface Usuario {
+export type Usuario = {
   id: string;
   nombre: string;
   email: string;
@@ -118,7 +118,7 @@ export type InsertUsuario = Omit<Usuario, "id" | "created_at"> & {
 
 export type UpdateUsuario = Partial<Usuario>;
 
-export interface PuntosReciclaje {
+export type PuntosReciclaje = {
   id: string;
   usuario_id: string;
   fecha: string;
@@ -136,13 +136,15 @@ export type InsertPuntosReciclaje = Omit<PuntosReciclaje, "id" | "created_at"> &
 
 export type UpdatePuntosReciclaje = Partial<PuntosReciclaje>;
 
-export interface HistorialRuta {
+export type HistorialRuta = {
   id: string;
   ruta_id: string | null;
   fecha_ejecucion: string;
   contenedores_recogidos: string[];
   tiempo_real: string | null;
   combustible_consumido: number | null;
+  distancia_total: number | null;
+  geometria: UbicacionPunto[] | null;
   observaciones: string | null;
   created_at: string;
 }
@@ -154,7 +156,7 @@ export type InsertHistorialRuta = Omit<HistorialRuta, "id" | "created_at"> & {
 
 export type UpdateHistorialRuta = Partial<HistorialRuta>;
 
-export interface Notificacion {
+export type Notificacion = {
   id: string;
   usuario_id: string;
   tipo: TipoNotificacion;
@@ -179,36 +181,43 @@ export interface Database {
         Row: Contenedor;
         Insert: InsertContenedor;
         Update: UpdateContenedor;
+        Relationships: [];
       };
       LecturasSensores: {
         Row: LecturaSensor;
         Insert: InsertLecturaSensor;
         Update: UpdateLecturaSensor;
+        Relationships: [];
       };
       Rutas: {
         Row: Ruta;
         Insert: InsertRuta;
         Update: UpdateRuta;
+        Relationships: [];
       };
       Usuarios: {
         Row: Usuario;
         Insert: InsertUsuario;
         Update: UpdateUsuario;
+        Relationships: [];
       };
       PuntosReciclaje: {
         Row: PuntosReciclaje;
         Insert: InsertPuntosReciclaje;
         Update: UpdatePuntosReciclaje;
+        Relationships: [];
       };
       HistorialRutas: {
         Row: HistorialRuta;
         Insert: InsertHistorialRuta;
         Update: UpdateHistorialRuta;
+        Relationships: [];
       };
       Notificaciones: {
         Row: Notificacion;
         Insert: InsertNotificacion;
         Update: UpdateNotificacion;
+        Relationships: [];
       };
     };
     Views: Record<string, never>;
