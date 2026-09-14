@@ -11,6 +11,7 @@ import type {
 
 const CLAVE_LOCAL_STORAGE = "ecoroute:contenedores:v2";
 const EVENTO_ACTUALIZADO = "ecoroute:contenedores:actualizado";
+const INTERVALO_REFRESCO_CONTENEDORES_MS = 300000;
 
 export const CONTENEDORES_FALLBACK: Contenedor[] = [
   {
@@ -180,6 +181,7 @@ export interface DatosNuevoContenedor {
 let cache: Contenedor[] | null = null;
 let cargaIniciada = false;
 let modoLocal = false;
+let temporizadorRefresco: ReturnType<typeof setInterval> | null = null;
 
 const ESTADO_SERVIDOR: EstadoContenedores = {
   estadoCarga: "cargando",
@@ -406,10 +408,64 @@ async function cargarContenedores(): Promise<void> {
   notificar();
 }
 
+function mismoContenidoLista(
+  previa: Contenedor[] | null,
+  nueva: Contenedor[]
+): boolean {
+  if (!previa || previa.length !== nueva.length) return false;
+  const porId = new Map(nueva.map((contenedor) => [contenedor.id, contenedor]));
+  for (const previo of previa) {
+    const actual = porId.get(previo.id);
+    if (!actual) return false;
+    if (previo.nivel_llenado !== actual.nivel_llenado) return false;
+    if (previo.estado !== actual.estado) return false;
+    if (previo.tipo_residuo !== actual.tipo_residuo) return false;
+    if ((previo.ubicacion?.lat ?? 0) !== (actual.ubicacion?.lat ?? 0)) return false;
+    if ((previo.ubicacion?.lng ?? 0) !== (actual.ubicacion?.lng ?? 0)) return false;
+    if (previo.ultima_lectura !== actual.ultima_lectura) return false;
+  }
+  return true;
+}
+
+async function refrescarContenedoresDesdeSupabase(): Promise<void> {
+  if (modoLocal || !estaSupabaseConfigurado()) return;
+  try {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
+      .from("Contenedores")
+      .select("*")
+      .limit(500);
+
+    if (error) throw error;
+
+    const nuevos = (data ?? []).map(mapearContenedor);
+    if (mismoContenidoLista(cache, nuevos)) return;
+
+    cache = nuevos;
+    escribirLocal(cache);
+    actualizarSnapshotEstado("listo", null);
+    notificar();
+  } catch (error) {
+    console.warn(
+      "[EcoRoute] No se pudo refrescar el inventario de contenedores. Se conserva la última carga válida.",
+      error
+    );
+  }
+}
+
+function iniciarRefrescoAutomatico(): void {
+  if (typeof window === "undefined") return;
+  if (temporizadorRefresco) return;
+  temporizadorRefresco = setInterval(() => {
+    void refrescarContenedoresDesdeSupabase();
+  }, INTERVALO_REFRESCO_CONTENEDORES_MS);
+}
+
 function iniciarCargaUnaVez(): void {
   if (cargaIniciada) return;
   cargaIniciada = true;
   void cargarContenedores();
+  iniciarRefrescoAutomatico();
 }
 
 function crearContenedorLocal(datos: DatosNuevoContenedor): Contenedor {

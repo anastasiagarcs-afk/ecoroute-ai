@@ -16,6 +16,8 @@ const DESCRIPCIONES_COMPONENTES = {
     "Formulario ciudadano para registrar entregas (material + peso en kg) con cálculo automático de puntos e inserción en Supabase.",
   "GamificacionPanel.tsx":
     "Panel de gamificación: puntos acumulados, nivel del ciudadano, barra de progreso y catálogo de recompensas.",
+  "DashboardGerencial.tsx":
+    "Dashboard gerencial: KPIs (totales, promedio de llenado, críticos >80%, rutas ejecutadas), filtros por zona y rango de fechas, gráfico de barras de estado por zona y tabla de contenedores críticos con acción Atender/Vaciar.",
   "SeparacionModulo.tsx":
     "Contenedor del módulo de Separación y Gamificación con navegación por pestañas.",
   "NuevoContenedorModal.tsx":

@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore, useState } from "react";
 import Link from "next/link";
+import DashboardGerencial from "@/components/DashboardGerencial";
 import NuevoContenedorModal from "@/components/NuevoContenedorModal";
 import RoutesMapView from "@/components/RoutesMapView";
 import {
@@ -15,26 +16,6 @@ import { estaSupabaseConfigurado } from "@/lib/supabaseClient";
 import type { UbicacionPunto } from "@/types/schema";
 
 const CENTRO_CIUDAD: UbicacionPunto = { lat: 8.34739, lng: -62.65371 };
-
-function TarjetaResumen({
-  etiqueta,
-  valor,
-  colorPunto,
-}: {
-  etiqueta: string;
-  valor: number;
-  colorPunto: string;
-}) {
-  return (
-    <div className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-      <span className={`h-3.5 w-3.5 shrink-0 rounded-full ${colorPunto}`} />
-      <div>
-        <p className="text-2xl font-bold leading-tight text-zinc-900 dark:text-zinc-50">{valor}</p>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">{etiqueta}</p>
-      </div>
-    </div>
-  );
-}
 
 export default function Home() {
   const [modalAbierto, setModalAbierto] = useState(false);
@@ -52,13 +33,6 @@ export default function Home() {
 
   const contenedoresVisibles =
     estadoContenedores.estadoCarga === "cargando" ? [] : contenedores;
-
-  const total = contenedoresVisibles.length;
-  const criticos = contenedoresVisibles.filter((c) => c.nivel_llenado > 80).length;
-  const medios = contenedoresVisibles.filter(
-    (c) => c.nivel_llenado >= 50 && c.nivel_llenado <= 80
-  ).length;
-  const bajos = contenedoresVisibles.filter((c) => c.nivel_llenado < 50).length;
 
   const datosRespaldo =
     !estaSupabaseConfigurado() || estadoContenedores.estadoCarga === "error";
@@ -103,28 +77,7 @@ export default function Home() {
         </div>
       </header>
 
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <TarjetaResumen
-          etiqueta="Contenedores totales"
-          valor={total}
-          colorPunto="bg-zinc-400"
-        />
-        <TarjetaResumen
-          etiqueta="Nivel bajo (< 50%)"
-          valor={bajos}
-          colorPunto="bg-emerald-500"
-        />
-        <TarjetaResumen
-          etiqueta="Nivel medio (50 - 80%)"
-          valor={medios}
-          colorPunto="bg-amber-500"
-        />
-        <TarjetaResumen
-          etiqueta="Nivel crítico (> 80%)"
-          valor={criticos}
-          colorPunto="bg-red-500"
-        />
-      </section>
+      <DashboardGerencial />
 
       <section className="flex flex-1 justify-center">
         <RoutesMapView contenedores={contenedoresVisibles} centro={CENTRO_CIUDAD} />

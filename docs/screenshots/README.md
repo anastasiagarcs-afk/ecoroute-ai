@@ -12,6 +12,8 @@ Este directorio contiene las capturas de pantalla de la aplicación para el info
 | `04-separacion-guia.png` | Guía de Separación en la Fuente (tarjetas por material) | Pendiente |
 | `05-toasts.png` | Notificaciones Toast (éxito, error, info) sobre el mapa | Pendiente |
 | `06-dark-mode.png` | Vista completa en modo oscuro | Pendiente |
+| `07-ia-proceso.png` | Proceso de desarrollo asistido por IA | Pendiente |
+| `08-dashboard-gerencial.png` | Dashboard Gerencial (KPIs, filtros, gráfico por zona, críticos) | Pendiente |
 
 ## Instrucciones
 

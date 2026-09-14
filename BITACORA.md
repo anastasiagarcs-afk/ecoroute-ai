@@ -1,5 +1,5 @@
 # Bitácora del Proyecto — EcoRoute AI
-> Documento generado automáticamente el 09 de septiembre de 2026 a las 05:12 p. m. por `npm run informe`. No editar a mano: se regenera desde el código para mantenerse al día.
+> Documento generado automáticamente el 14 de septiembre de 2026 a las 07:40 p. m. por `npm run informe`. No editar a mano: se regenera desde el código para mantenerse al día.
 > **Nota**: Este archivo es el registro cronológico automático. Para el informe académico formal, ver `INFORME_PROYECTO.md`.
 
 ## 1. Arquitectura y Stack Tecnológico
@@ -28,6 +28,7 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 | Archivo | Export principal | Líneas | Descripción |
 | --- | --- | --- | --- |
 | `src/components/ConfirmarEliminarContenedorModal.tsx` | ConfirmarEliminarContenedorModal | 91 | Diálogo de confirmación para eliminar un contenedor en Supabase y quitar su marcador del mapa. |
+| `src/components/DashboardGerencial.tsx` | DashboardGerencial | 396 | Dashboard gerencial: KPIs (totales, promedio de llenado, críticos >80%, rutas ejecutadas), filtros por zona y rango de fechas, gráfico de barras de estado por zona y tabla de contenedores críticos con acción Atender/Vaciar. |
 | `src/components/EditarContenedorModal.tsx` | EditarContenedorModal | 226 | Modal para editar un contenedor existente: ajusta el porcentaje de llenado, el tipo de residuo y el estado (activo, vacío, mantenimiento, etc.), actualiza Supabase y refresca el marcador en el mapa. |
 | `src/components/GamificacionPanel.tsx` | GamificacionPanel | 179 | Panel de gamificación: puntos acumulados, nivel del ciudadano, barra de progreso y catálogo de recompensas. |
 | `src/components/Map.tsx` | MapaContenedores | 393 | Mapa Leaflet interactivo: contenedores en tiempo real y polilínea de la ruta activa. |
@@ -49,7 +50,7 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 
 | Módulo | Líneas | Descripción |
 | --- | --- | --- |
-| `src/lib/contenedoresStore.ts` | 615 | Almacén de contenedores: carga y semilla desde Supabase, normalización de ubicación (objeto, GeoJSON, EWKT o WKB/EWKB hexadecimal con parseFloat), datos de respaldo en localStorage y registro, vaciado (0% y estado vacio), edición y eliminación en tiempo real. |
+| `src/lib/contenedoresStore.ts` | 671 | Almacén de contenedores: carga y semilla desde Supabase, normalización de ubicación (objeto, GeoJSON, EWKT o WKB/EWKB hexadecimal con parseFloat), datos de respaldo en localStorage y registro, vaciado (0% y estado vacio), edición y eliminación en tiempo real. |
 | `src/lib/gamificacion.ts` | 190 | Lógica pura de gamificación: puntos por kg según material, niveles de ciudadano, progreso y catálogo de recompensas. |
 | `src/lib/historialRutas.ts` | 384 | Almacén de historial de rutas con persistencia en Supabase (tabla HistorialRutas), reintentos y respaldo en localStorage. |
 | `src/lib/n8nWebhook.ts` | 63 | Cliente para webhook n8n: obtiene URL desde env, POST JSON con timeout 6s (AbortController), payload {usuario_id, contenedor_id, material, peso_kg, timestamp}, fallback a null si falla. |
@@ -106,4 +107,11 @@ npm run informe
 - **ToastHost.tsx**: `getServerSnapshot` estabilizado con `SNAPSHOT_SERVIDOR_VACIO` const (evita bucle SSR infinito).
 - **Map.tsx**: `queueMicrotask(() => raiz.unmount())` en cleanup effects (evita "Attempted to synchronously unmount a root").
 - **scripts/generar-informe.mjs**: Output configurado para `BITACORA.md` con preservación de sección manual.
+- **Verificaciones**: `tsc --noEmit`, `lint`, `build` → 0 errores / compilación exitosa.
+
+### 2026-09-14 — Cierre del Sprint 3: Polling automático + Dashboard Gerencial
+- **contenedoresStore.ts**: polling automático cada 5 min (`INTERVALO_REFRESCO_CONTENEDORES_MS = 300000`). `refrescarContenedoresDesdeSupabase()` compara el resultado contra el cache (`mismoContenidoLista`) y solo actualiza/persiste/notifica si cambió; en error conserva la última carga válida (RF-08/HU-02).
+- **DashboardGerencial.tsx**: dashboard gerencial con KPIs (total, promedio de llenado, críticos >80%, rutas ejecutadas), filtros por zona y rango de fechas (RF-22), gráfico de barras de estado por zona y tabla de contenedores críticos con botón Atender/Vaciar que vacía en Supabase (0% + estado `vacio`) y dispara toast de éxito (HU-06, HU-09, RF-14, RF-21).
+- **app/page.tsx**: se reemplazan las tarjetas resumen por `<DashboardGerencial />`.
+- **scripts/generar-informe.mjs**: descripción de `DashboardGerencial.tsx` añadida al informe automático.
 - **Verificaciones**: `tsc --noEmit`, `lint`, `build` → 0 errores / compilación exitosa.

@@ -1,0 +1,396 @@
+"use client";
+
+import { useMemo, useState, useSyncExternalStore } from "react";
+import {
+  obtenerSnapshotContenedores,
+  obtenerSnapshotServidorContenedores,
+  suscribirseAContenedores,
+  vaciarContenedor,
+} from "@/lib/contenedoresStore";
+import {
+  obtenerSnapshotHistorial,
+  obtenerSnapshotServidorHistorial,
+  suscribirseAlHistorial,
+} from "@/lib/historialRutas";
+import { mostrarToast } from "@/lib/toastStore";
+import type { Contenedor } from "@/types/schema";
+
+const UMBRAL_MEDIO = 50;
+const UMBRAL_CRITICO = 80;
+
+const ETIQUETAS_TIPO_RESIDUO: Record<string, string> = {
+  organico: "Orgánico",
+  reciclable: "Reciclable",
+  no_reciclable: "No reciclable",
+  vidrio: "Vidrio",
+  papel_carton: "Papel / Cartón",
+  plastico: "Plástico",
+  metal: "Metal",
+  peligroso: "Peligroso",
+  mixto: "Mixto",
+};
+
+function TarjetaKpi({
+  etiqueta,
+  valor,
+  detalle,
+  colorPunto,
+}: {
+  etiqueta: string;
+  valor: string | number;
+  detalle?: string;
+  colorPunto: string;
+}) {
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <span className={`mt-1 h-3.5 w-3.5 shrink-0 rounded-full ${colorPunto}`} />
+      <div className="min-w-0">
+        <p className="text-2xl font-bold leading-tight text-zinc-900 dark:text-zinc-50">
+          {valor}
+        </p>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">{etiqueta}</p>
+        {detalle && (
+          <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">
+            {detalle}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function DashboardGerencial() {
+  const contenedores = useSyncExternalStore(
+    suscribirseAContenedores,
+    obtenerSnapshotContenedores,
+    obtenerSnapshotServidorContenedores
+  );
+  const historial = useSyncExternalStore(
+    suscribirseAlHistorial,
+    obtenerSnapshotHistorial,
+    obtenerSnapshotServidorHistorial
+  );
+
+  const zonas = useMemo(() => {
+    const conjunto = new Set<string>();
+    for (const contenedor of contenedores) {
+      if (contenedor.zona) conjunto.add(contenedor.zona);
+    }
+    return ["Todas", ...[...conjunto].sort()];
+  }, [contenedores]);
+
+  const [zonaSeleccionada, setZonaSeleccionada] = useState("Todas");
+  const [fechaDesde, setFechaDesde] = useState("");
+  const [fechaHasta, setFechaHasta] = useState("");
+
+  const limpiarFiltros = () => {
+    setZonaSeleccionada("Todas");
+    setFechaDesde("");
+    setFechaHasta("");
+  };
+
+  const contenedoresFiltrados = useMemo(() => {
+    if (zonaSeleccionada === "Todas") return contenedores;
+    return contenedores.filter((contenedor) => contenedor.zona === zonaSeleccionada);
+  }, [contenedores, zonaSeleccionada]);
+
+  const idsZona = useMemo(() => {
+    if (zonaSeleccionada === "Todas") return null;
+    return new Set(contenedoresFiltrados.map((contenedor) => contenedor.id));
+  }, [contenedoresFiltrados, zonaSeleccionada]);
+
+  const rutasFiltradas = useMemo(() => {
+    const inicio = fechaDesde ? new Date(`${fechaDesde}T00:00:00`).getTime() : null;
+    const fin = fechaHasta ? new Date(`${fechaHasta}T23:59:59.999`).getTime() : null;
+
+    return historial.filter((registro) => {
+      const tiempo = new Date(registro.fecha_ejecucion).getTime();
+      if (inicio !== null && tiempo < inicio) return false;
+      if (fin !== null && tiempo > fin) return false;
+      if (idsZona) {
+        return registro.contenedoresAtendidos.some((id) => idsZona.has(id));
+      }
+      return true;
+    });
+  }, [historial, fechaDesde, fechaHasta, idsZona]);
+
+  const datosPorZona = useMemo(() => {
+    const agrupadas = new Map<string, Contenedor[]>();
+    for (const contenedor of contenedores) {
+      const clave = contenedor.zona ?? "Sin zona";
+      const lista = agrupadas.get(clave) ?? [];
+      lista.push(contenedor);
+      agrupadas.set(clave, lista);
+    }
+    return [...agrupadas.entries()]
+      .filter(
+        ([, lista]) =>
+          zonaSeleccionada === "Todas" ||
+          lista.some((contenedor) => contenedor.zona === zonaSeleccionada)
+      )
+      .map(([zona, lista]) => {
+        const total = lista.length;
+        const bajos = lista.filter(
+          (contenedor) => contenedor.nivel_llenado < UMBRAL_MEDIO
+        ).length;
+        const medios = lista.filter(
+          (contenedor) =>
+            contenedor.nivel_llenado >= UMBRAL_MEDIO &&
+            contenedor.nivel_llenado <= UMBRAL_CRITICO
+        ).length;
+        const criticos = lista.filter(
+          (contenedor) => contenedor.nivel_llenado > UMBRAL_CRITICO
+        ).length;
+        const promedio =
+          total > 0
+            ? Math.round(
+                (lista.reduce((suma, c) => suma + c.nivel_llenado, 0) / total) * 10
+              ) / 10
+            : 0;
+        return { zona, total, bajos, medios, criticos, promedio };
+      })
+      .sort(
+        (a, b) => b.criticos - a.criticos || b.total - a.total || a.zona.localeCompare(b.zona)
+      );
+  }, [contenedores, zonaSeleccionada]);
+
+  const totalContenedores = contenedoresFiltrados.length;
+  const promedioLlenado =
+    totalContenedores > 0
+      ? Math.round(
+          (contenedoresFiltrados.reduce((suma, c) => suma + c.nivel_llenado, 0) /
+            totalContenedores) *
+            10
+        ) / 10
+      : 0;
+  const criticos = contenedoresFiltrados.filter(
+    (contenedor) => contenedor.nivel_llenado > UMBRAL_CRITICO
+  );
+  const rangoFechas = fechaDesde || fechaHasta ? `${fechaDesde || "inicio"} – ${fechaHasta || "hoy"}` : "Todo el historial";
+
+  const atenderContenedor = async (contenedor: Contenedor) => {
+    try {
+      await vaciarContenedor(contenedor.id);
+      mostrarToast(
+        "Contenedor atendido",
+        `${contenedor.numero_identificacion} vaciado al 0%.`,
+        "exito"
+      );
+    } catch (error) {
+      mostrarToast(
+        "No se pudo vaciar el contenedor",
+        error instanceof Error ? error.message : "Inténtalo de nuevo.",
+        "error"
+      );
+    }
+  };
+
+  return (
+    <section className="flex flex-col gap-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+            Dashboard Gerencial
+          </h2>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            Indicadores clave de recolección y estado de contenedores
+          </p>
+        </div>
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="flex flex-col gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+            Zona
+            <select
+              value={zonaSeleccionada}
+              onChange={(evento) => setZonaSeleccionada(evento.target.value)}
+              className="rounded-lg border border-zinc-300 bg-white px-2.5 py-1.5 text-sm text-zinc-900 focus:border-emerald-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+            >
+              {zonas.map((zona) => (
+                <option key={zona} value={zona}>
+                  {zona}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+            Desde
+            <input
+              type="date"
+              value={fechaDesde}
+              max={fechaHasta || undefined}
+              onChange={(evento) => setFechaDesde(evento.target.value)}
+              className="rounded-lg border border-zinc-300 bg-white px-2.5 py-1.5 text-sm text-zinc-900 focus:border-emerald-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+            Hasta
+            <input
+              type="date"
+              value={fechaHasta}
+              min={fechaDesde || undefined}
+              onChange={(evento) => setFechaHasta(evento.target.value)}
+              className="rounded-lg border border-zinc-300 bg-white px-2.5 py-1.5 text-sm text-zinc-900 focus:border-emerald-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={limpiarFiltros}
+            className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+          >
+            Limpiar filtros
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <TarjetaKpi
+          etiqueta="Contenedores totales"
+          valor={totalContenedores}
+          detalle={zonaSeleccionada === "Todas" ? "Todas las zonas" : zonaSeleccionada}
+          colorPunto="bg-zinc-400"
+        />
+        <TarjetaKpi
+          etiqueta="Promedio de llenado"
+          valor={`${promedioLlenado}%`}
+          detalle="General de la selección"
+          colorPunto="bg-blue-500"
+        />
+        <TarjetaKpi
+          etiqueta="Contenedores críticos"
+          valor={criticos.length}
+          detalle="> 80% de capacidad"
+          colorPunto="bg-red-500"
+        />
+        <TarjetaKpi
+          etiqueta="Rutas ejecutadas"
+          valor={rutasFiltradas.length}
+          detalle={rangoFechas}
+          colorPunto="bg-emerald-500"
+        />
+      </div>
+
+      <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <h3 className="mb-3 text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+          Estado de llenado por zona
+        </h3>
+        {datosPorZona.length === 0 ? (
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            No hay contenedores con zona asignada.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-wrap gap-3 text-xs text-zinc-500 dark:text-zinc-400">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> &lt; 50%
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-amber-500" /> 50 – 80%
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-red-600" /> &gt; 80%
+              </span>
+            </div>
+            {datosPorZona.map(({ zona, total, bajos, medios, criticos, promedio }) => (
+              <div key={zona} className="flex flex-col gap-1.5">
+                <div className="flex items-baseline justify-between gap-2 text-sm">
+                  <span className="font-medium text-zinc-700 dark:text-zinc-200">
+                    {zona}
+                  </span>
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                    {total} contenedores · promedio {promedio}%
+                  </span>
+                </div>
+                <div className="flex h-3 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+                  {bajos > 0 && (
+                    <div
+                      className="bg-emerald-500"
+                      style={{ width: `${(bajos / total) * 100}%` }}
+                    />
+                  )}
+                  {medios > 0 && (
+                    <div
+                      className="bg-amber-500"
+                      style={{ width: `${(medios / total) * 100}%` }}
+                    />
+                  )}
+                  {criticos > 0 && (
+                    <div
+                      className="bg-red-600"
+                      style={{ width: `${(criticos / total) * 100}%` }}
+                    />
+                  )}
+                </div>
+                <div className="text-xs text-zinc-400 dark:text-zinc-500">
+                  {bajos} bajos · {medios} medios · {criticos} críticos
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+            Contenedores críticos (&gt; 80%)
+          </h3>
+          <span className="rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20 dark:bg-red-500/10 dark:text-red-400">
+            {criticos.length}
+          </span>
+        </div>
+        {criticos.length === 0 ? (
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            Sin contenedores críticos.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+                <tr>
+                  <th className="py-2 pr-3 font-semibold">Código</th>
+                  <th className="py-2 pr-3 font-semibold">Zona</th>
+                  <th className="py-2 pr-3 font-semibold">Tipo</th>
+                  <th className="py-2 pr-3 font-semibold">Nivel</th>
+                  <th className="py-2 pr-3 font-semibold">Estado</th>
+                  <th className="py-2 font-semibold">Acción</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                {criticos.map((contenedor) => (
+                  <tr key={contenedor.id}>
+                    <td className="py-2 pr-3 font-medium text-zinc-900 dark:text-zinc-50">
+                      {contenedor.numero_identificacion}
+                    </td>
+                    <td className="py-2 pr-3 text-zinc-600 dark:text-zinc-300">
+                      {contenedor.zona ?? "—"}
+                    </td>
+                    <td className="py-2 pr-3 text-zinc-600 dark:text-zinc-300">
+                      {ETIQUETAS_TIPO_RESIDUO[contenedor.tipo_residuo] ?? contenedor.tipo_residuo}
+                    </td>
+                    <td className="py-2 pr-3">
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="h-2.5 w-2.5 rounded-full bg-red-600" />
+                        {contenedor.nivel_llenado}%
+                      </span>
+                    </td>
+                    <td className="py-2 pr-3 text-zinc-600 dark:text-zinc-300">
+                      {contenedor.estado}
+                    </td>
+                    <td className="py-2">
+                      <button
+                        type="button"
+                        onClick={() => void atenderContenedor(contenedor)}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-700"
+                      >
+                        Atender / Vaciar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
