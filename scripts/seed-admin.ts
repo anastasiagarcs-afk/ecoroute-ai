@@ -35,7 +35,7 @@ async function main() {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  const email = "admin@ecoroute.test";
+  const email = "admin@ecoroute.com";
   const password = "Admin123456!";
 
   console.log(`Verificando usuario: ${email}`);

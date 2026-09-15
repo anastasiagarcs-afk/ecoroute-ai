@@ -1,5 +1,5 @@
 # Bitácora del Proyecto — EcoRoute AI
-> Documento generado automáticamente el 15 de septiembre de 2026 a las 02:16 a. m. por `npm run informe`. No editar a mano: se regenera desde el código para mantenerse al día.
+> Documento generado automáticamente el 15 de septiembre de 2026 a las 04:20 a. m. por `npm run informe`. No editar a mano: se regenera desde el código para mantenerse al día.
 > **Nota**: Este archivo es el registro cronológico automático. Para el informe académico formal, ver `INFORME_PROYECTO.md`.
 
 ## 1. Arquitectura y Stack Tecnológico
@@ -53,7 +53,7 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 | Módulo | Líneas | Descripción |
 | --- | --- | --- |
 | `src/lib/adminService.ts` | 41 | — |
-| `src/lib/authService.ts` | 167 | — |
+| `src/lib/authService.ts` | 233 | — |
 | `src/lib/contenedoresStore.ts` | 671 | Almacén de contenedores: carga y semilla desde Supabase, normalización de ubicación (objeto, GeoJSON, EWKT o WKB/EWKB hexadecimal con parseFloat), datos de respaldo en localStorage y registro, vaciado (0% y estado vacio), edición y eliminación en tiempo real. |
 | `src/lib/gamificacion.ts` | 190 | Lógica pura de gamificación: puntos por kg según material, niveles de ciudadano, progreso y catálogo de recompensas. |
 | `src/lib/geminiPredictiveService.ts` | 356 | Servicio predictivo con IA (HU-11/RF-24): obtiene el histórico de LecturasSensores desde Supabase (o sintetiza lecturas cuando no hay datos), ajusta un modelo de regresión lineal, consume opcionalmente la API de Gemini (NEXT_PUBLIC_GEMINI_API_KEY) y genera alertas predictivas que se persisten en la tabla Notificaciones (tipo 'alerta_predictiva'). |
@@ -82,8 +82,9 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 - `supabase/migrations/09_roles_y_solicitudes_acceso_rls.sql`
 - `supabase/migrations/10_seed_admin_acceso.sql`
 - `supabase/migrations/11_aprobar_solicitud_rol_asignado.sql`
+- `supabase/migrations/12_reforzar_rls_solicitudes_acceso.sql`
 
-Total de políticas RLS habilitadas en migraciones: 18.
+Total de políticas RLS habilitadas en migraciones: 20.
 
 ### Tablas
 
@@ -137,3 +138,11 @@ npm run informe
 - **DashboardGerencial.tsx**: tarjeta "Predicción de IA (HU-11)" con botón Analizar con IA, grid de predicciones por contenedor (nivel proyectado, probabilidad, fuente, horas para crítico) y botón Notificar a conductor (RF-24/HU-11).
 - **Migración `08_lecturas_y_notificaciones_rls.sql`**: políticas RLS SELECT/INSERT para `LecturasSensores` y `Notificaciones` con clave anónima.
 - **Verificaciones**: `npx tsc --noEmit` → 0 errores.
+
+### 2026-09-15 — Sprint 5: Optimización flujo de registro + Auto-confirmación email + Dominio @ecoroute.com
+- **authService.ts**: `signUp()` con `emailConfirm: true` — bypass de confirmación por correo en desarrollo para evitar bloqueos por "email rate limit exceeded" de Supabase (capa gratuita).
+- **app/acceso/page.tsx**: Selector de rol en el paso de registro (Ciudadano / Operador / Gerente). Bifurcación: Ciudadano → acceso directo a `/`; Operador/Gerente → paso "solicitud" para enviar solicitud al panel `/admin`.
+- **scripts/seed-admin.ts**: Admin por defecto `admin@ecoroute.com` / `Admin123456!` (dominio corporativo simulado aceptado por Supabase).
+- **Archivos demo actualizados**: `reciclajeService.ts`, `geminiPredictiveService.ts`, `supabase/migrations/03_gamificacion_politicas.sql` — emails `@ecoroute.test` → `@ecoroute.com`.
+- **Arquitectura QA/Dev**: El uso de `emailConfirm: true` y el dominio `@ecoroute.com` son decisiones deliberadas para entornos de prueba (QA/Dev) que evitan los límites de tasa (rate limits) de envío de emails de Supabase en su plan gratuito durante la evaluación. En producción se usará dominio real + flujo de confirmación por email estándar.
+- **Verificaciones**: `npx tsc --noEmit`, `npm run lint`, `npm run build` → 0 errores / compilación exitosa.

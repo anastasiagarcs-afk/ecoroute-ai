@@ -16,7 +16,7 @@ import type {
   Usuario,
 } from "@/types/schema";
 
-const EMAIL_USUARIO_DEMO = "ciudadano.demo@ecoroute.test";
+const EMAIL_USUARIO_DEMO = "ciudadano.demo@ecoroute.com";
 
 export interface ResultadoRegistroEntrega {
   usuarioId: string;

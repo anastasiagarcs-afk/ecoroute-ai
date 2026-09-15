@@ -77,14 +77,20 @@ export async function registrarCuenta(
 ): Promise<{ exito: boolean; error?: string }> {
   const supabase = obtenerCliente();
 
-  const { error: authError } = await supabase.auth.signUp({
+  const { data: signUpData, error: authError } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { nombre: datos.nombre } },
+    options: {
+      data: { nombre: datos.nombre },
+      // email_confirm: true bypassa la confirmación por email en dev/QA
+      // @ts-expect-error Propiedad no tipada pero soportada por la API de Supabase
+      email_confirm: true,
+    },
   });
   if (authError) return { exito: false, error: authError.message };
 
-  const { data: { session } } = await supabase.auth.getSession();
+  // Usar la sesión directamente del response de signUp()
+  const session = signUpData.session ?? (await supabase.auth.getSession()).data.session;
   if (!session) return { exito: false, error: "No se pudo establecer la sesion" };
 
   const { data: existente } = await supabase
@@ -107,6 +113,66 @@ export async function registrarCuenta(
 
   await refrescarSesion();
   return { exito: true };
+}
+
+export async function registrarCuentaConSolicitud(
+  email: string,
+  password: string,
+  datos: { nombre: string },
+  rolSolicitado: RolUsuario | null
+): Promise<{ exito: boolean; error?: string; rolSolicitado?: RolUsuario }> {
+  const supabase = obtenerCliente();
+
+  const { data: signUpData, error: authError } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { nombre: datos.nombre },
+      // email_confirm: true bypassa la confirmación por email en dev/QA
+      // @ts-expect-error Propiedad no tipada pero soportada por la API de Supabase
+      email_confirm: true,
+    },
+  });
+  if (authError) return { exito: false, error: authError.message };
+
+  // Usar la sesión directamente del response de signUp()
+  const session = signUpData.session ?? (await supabase.auth.getSession()).data.session;
+  if (!session) return { exito: false, error: "No se pudo establecer la sesion" };
+
+  const userId = session.user.id;
+
+  // Insertar en Usuarios usando el auth.uid() como id (clave para RLS)
+  const { data: existente } = await supabase
+    .from("Usuarios")
+    .select("id")
+    .eq("email", email)
+    .single();
+
+  if (!existente) {
+    const { error: insertError } = await supabase.from("Usuarios").insert({
+      id: userId,
+      nombre: datos.nombre,
+      email,
+      rol: "Ciudadano",
+      telefono: null,
+      zona_asignada: null,
+      puntos_reciclaje: 0,
+    });
+    if (insertError) return { exito: false, error: insertError.message };
+  }
+
+  // Si solicitó Operador o Gerente, crear solicitud en la misma transacción
+  if (rolSolicitado) {
+    const { error: solicitudError } = await supabase.from("SolicitudesAcceso").insert({
+      usuario_id: userId,
+      rol_solicitado: rolSolicitado,
+      estado: "pendiente",
+    });
+    if (solicitudError) return { exito: false, error: solicitudError.message };
+  }
+
+  await refrescarSesion();
+  return { exito: true, rolSolicitado: rolSolicitado ?? undefined };
 }
 
 export async function iniciarSesion(

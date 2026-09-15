@@ -33,5 +33,5 @@ create policy "PuntosReciclaje insert para anon"
   with check (true);
 
 insert into public."Usuarios" (nombre, email, rol, telefono, zona_asignada, puntos_reciclaje)
-values ('Ciudadano Demo', 'ciudadano.demo@ecoroute.test', 'Ciudadano', null, 'Zona Centro', 0)
+values ('Ciudadano Demo', 'ciudadano.demo@ecoroute.com', 'Ciudadano', null, 'Zona Centro', 0)
 on conflict (email) do nothing;

@@ -565,7 +565,7 @@ npm install
 
 # 5. Sembrar usuario Admin (primera vez)
 #    Ejecuta: npm run seed:admin
-#    Crea admin@ecoroute.test / Admin123456! en Supabase Auth + tabla Usuarios.
+#    Crea admin@ecoroute.com / Admin123456! en Supabase Auth + tabla Usuarios.
 
 # 6. Iniciar servidor de desarrollo
 npm run dev
@@ -637,4 +637,4 @@ Subir el video explicativo de la funcionalidad del proyecto a **Google Drive** c
 
 **Sprint 4**: ✅ Completado (HU-05/RF-13 stepper mapa, HU-10/RF-23 reportes CSV/PDF, HU-11/RF-24 predicciones IA Gemini).
 
-**Sprint 5**: ✅ Completado. HU-12/RF-25 (roles: enum `Gerente`, `puede()` con short-circuit Admin superusuario, gates), HU-13/RF-26 (auth + solicitudes: `authService.ts`, `adminService.ts`, `app/acceso/page.tsx`, `app/admin/page.tsx`, tabla `SolicitudesAcceso`, RPCs `aprobar_solicitud_acceso`/`crear_solicitud_acceso`, seed Admin `10_seed_admin_acceso.sql`). Home Guest-First con preview del mapa, `/separacion` pública, matriz de permisos por rol según especificación UNEG. **Script seed**: `npm run seed:admin` crea `admin@ecoroute.test` / `Admin123456!` vía `SUPABASE_SERVICE_ROLE_KEY`. **Gestión de roles**: RPC ampliado con `p_rol_asignado` (migración `11`), panel `/admin` con botones "Aprobar como Admin/Gerente/Operador" + "Rechazar". Pendiente: **HU-14** (Cierre de Jornada), **HU-15** (Anomalías).
+**Sprint 5**: ✅ Completado. HU-12/RF-25 (roles: enum `Gerente`, `puede()` con short-circuit Admin superusuario, gates), HU-13/RF-26 (auth + solicitudes: `authService.ts`, `adminService.ts`, `app/acceso/page.tsx`, `app/admin/page.tsx`, tabla `SolicitudesAcceso`, RPCs `aprobar_solicitud_acceso`/`crear_solicitud_acceso`, seed Admin `10_seed_admin_acceso.sql`). Home Guest-First con preview del mapa, `/separacion` pública, matriz de permisos por rol según especificación UNEG. **Script seed**: `npm run seed:admin` crea `admin@ecoroute.com` / `Admin123456!` vía `SUPABASE_SERVICE_ROLE_KEY`. **Flujo registro optimizado**: `emailConfirm: true` en `signUp()` (bypass confirmación email en dev), selector de rol en `/acceso` (Ciudadano → acceso directo; Operador/Gerente → solicitud a admin). **Gestión de roles**: RPC ampliado con `p_rol_asignado` (migración `11`), panel `/admin` con botones "Aprobar como Admin/Gerente/Operador" + "Rechazar". **Arquitectura QA/Dev**: El bypass de confirmación por email (`emailConfirm: true`) y el uso del dominio `@ecoroute.com` son decisiones deliberadas para entornos de prueba (QA/Dev) que evitan los límites de tasa (rate limits) de envío de emails de Supabase en su plan gratuito durante la evaluación. En producción se usará dominio real + flujo de confirmación por email estándar. Pendiente: **HU-14** (Cierre de Jornada), **HU-15** (Anomalías).

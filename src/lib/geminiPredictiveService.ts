@@ -308,7 +308,7 @@ async function obtenerIdUsuarioDemo(): Promise<string | null> {
   const { data, error } = await supabase
     .from("Usuarios")
     .select("id")
-    .eq("email", "ciudadano.demo@ecoroute.test")
+    .eq("email", "ciudadano.demo@ecoroute.com")
     .limit(1)
     .maybeSingle();
 
