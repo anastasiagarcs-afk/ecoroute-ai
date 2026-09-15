@@ -1,5 +1,5 @@
 # Bitácora del Proyecto — EcoRoute AI
-> Documento generado automáticamente el 14 de septiembre de 2026 a las 11:36 p. m. por `npm run informe`. No editar a mano: se regenera desde el código para mantenerse al día.
+> Documento generado automáticamente el 15 de septiembre de 2026 a las 01:28 a. m. por `npm run informe`. No editar a mano: se regenera desde el código para mantenerse al día.
 > **Nota**: Este archivo es el registro cronológico automático. Para el informe académico formal, ver `INFORME_PROYECTO.md`.
 
 ## 1. Arquitectura y Stack Tecnológico
@@ -21,14 +21,16 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 | --- | --- | --- |
 | Sprint 1 | Base de datos (schema + migraciones), mapas y monitoreo de contenedores | Completado |
 | Sprint 2 | Optimización de rutas (OSRM), historial y persistencia en Supabase | Completado |
-| Sprint 3 | Separación en la fuente, registro de reciclaje y gamificación | En Desarrollo |
+| Sprint 3 | Separación en la fuente, registro de reciclaje, gamificación y dashboard gerencial | Completado |
+| Sprint 4 | Analítica, IA predictiva, reportes y stepper de mapa | Completado |
+| Sprint 5 | Autenticación, roles, solicitudes de acceso, Home Guest-First (HU-12, HU-13) | Completado |
 
 ## 3. Componentes de la aplicación
 
 | Archivo | Export principal | Líneas | Descripción |
 | --- | --- | --- | --- |
 | `src/components/ConfirmarEliminarContenedorModal.tsx` | ConfirmarEliminarContenedorModal | 91 | Diálogo de confirmación para eliminar un contenedor en Supabase y quitar su marcador del mapa. |
-| `src/components/DashboardGerencial.tsx` | DashboardGerencial | 575 | Dashboard gerencial: KPIs (totales, promedio de llenado, críticos >80%, rutas ejecutadas), filtros por zona y rango de fechas, gráfico de barras de estado por zona y tabla de contenedores críticos con acción Atender/Vaciar. |
+| `src/components/DashboardGerencial.tsx` | DashboardGerencial | 597 | Dashboard gerencial: KPIs (totales, promedio de llenado, críticos >80%, rutas ejecutadas), filtros por zona y rango de fechas, gráfico de barras de estado por zona y tabla de contenedores críticos con acción Atender/Vaciar. |
 | `src/components/EditarContenedorModal.tsx` | EditarContenedorModal | 226 | Modal para editar un contenedor existente: ajusta el porcentaje de llenado, el tipo de residuo y el estado (activo, vacío, mantenimiento, etc.), actualiza Supabase y refresca el marcador en el mapa. |
 | `src/components/GamificacionPanel.tsx` | GamificacionPanel | 179 | Panel de gamificación: puntos acumulados, nivel del ciudadano, barra de progreso y catálogo de recompensas. |
 | `src/components/Map.tsx` | MapaContenedores | 426 | Mapa Leaflet interactivo: contenedores en tiempo real y polilínea de la ruta activa. |
@@ -36,13 +38,15 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 | `src/components/PopupContenedor.tsx` | PopupContenedor | 222 | Contenido en React del popup de cada marcador: información y estado del contenedor e icono con acciones Vaciar (0% y estado Vacío/Disponible), Editar y Eliminar. |
 | `src/components/RegistroReciclajeForm.tsx` | RegistroReciclajeForm | 252 | Formulario ciudadano para registrar entregas (material + peso en kg) con cálculo automático de puntos e inserción en Supabase. |
 | `src/components/RoutePanel.tsx` | RoutePanel | 556 | Panel de optimización de rutas: selector de contenedores, generación de ruta vía OSRM, persistencia en el historial, gestión de contenedores (vaciar, editar, eliminar) y reinicio a línea recta. |
-| `src/components/RoutesMapView.tsx` | RoutesMapView | 108 | Vista integrada de mapa + panel de rutas. Coordina la ruta generada y la ruta histórica inspeccionada sobre Leaflet. |
+| `src/components/RoutesMapView.tsx` | RoutesMapView | 126 | Vista integrada de mapa + panel de rutas. Coordina la ruta generada y la ruta histórica inspeccionada sobre Leaflet. |
 | `src/components/SeparacionGuia.tsx` | SeparacionGuia | 216 | Guía interactiva de separación en la fuente: tarjetas por tipo de residuo con qué depositar y qué evitar. |
 | `src/components/SeparacionModulo.tsx` | SeparacionModulo | 159 | Contenedor del módulo de Separación y Gamificación con navegación por pestañas. |
 | `src/components/ToastHost.tsx` | ToastHost | 111 | Host global de notificaciones (toasts) usando useSyncExternalStore; posicionado sobre el mapa con animación de entrada y colores por tipo (éxito, error, info). |
 
 ## 4. Rutas de la aplicación
 
+- `/acceso` → `app/acceso/page.tsx`
+- `/admin` → `app/admin/page.tsx`
 - `/` → `app/page.tsx`
 - `/separacion` → `app/separacion/page.tsx`
 
@@ -50,6 +54,8 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 
 | Módulo | Líneas | Descripción |
 | --- | --- | --- |
+| `src/lib/adminService.ts` | 39 | — |
+| `src/lib/authService.ts` | 167 | — |
 | `src/lib/contenedoresStore.ts` | 671 | Almacén de contenedores: carga y semilla desde Supabase, normalización de ubicación (objeto, GeoJSON, EWKT o WKB/EWKB hexadecimal con parseFloat), datos de respaldo en localStorage y registro, vaciado (0% y estado vacio), edición y eliminación en tiempo real. |
 | `src/lib/gamificacion.ts` | 190 | Lógica pura de gamificación: puntos por kg según material, niveles de ciudadano, progreso y catálogo de recompensas. |
 | `src/lib/geminiPredictiveService.ts` | 356 | Servicio predictivo con IA (HU-11/RF-24): obtiene el histórico de LecturasSensores desde Supabase (o sintetiza lecturas cuando no hay datos), ajusta un modelo de regresión lineal, consume opcionalmente la API de Gemini (NEXT_PUBLIC_GEMINI_API_KEY) y genera alertas predictivas que se persisten en la tabla Notificaciones (tipo 'alerta_predictiva'). |
@@ -57,8 +63,10 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 | `src/lib/n8nWebhook.ts` | 63 | Cliente para webhook n8n: obtiene URL desde env, POST JSON con timeout 6s (AbortController), payload {usuario_id, contenedor_id, material, peso_kg, timestamp}, fallback a null si falla. |
 | `src/lib/reciclajeService.ts` | 264 | Servicio Supabase del módulo de reciclaje: usuario ciudadano actual, registro de entregas con webhook n8n (insert PuntosReciclaje + update Usuarios) y entregas recientes. |
 | `src/lib/reporteExportador.ts` | 237 | — |
+| `src/lib/rolesAutorizados.ts` | 63 | — |
 | `src/lib/routeOptimizer.ts` | 252 | Optimización de rutas con OSRM (perfiles vehiculares y pesos) y cálculo de ruta por distancia, con fallback a línea recta. |
 | `src/lib/supabaseClient.ts` | 69 | Cliente Supabase del navegador: sanitización de variables de entorno, validación de configuración y detección del modo de respaldo. |
+| `src/lib/supabaseServer.ts` | 29 | — |
 | `src/lib/toastStore.ts` | 61 | Mini-store de notificaciones (toasts) con patrón useSyncExternalStore: suscripción, snapshot, auto-descarte a 4.5s y descarte manual por ID. |
 
 ## 6. Base de datos (Supabase)
@@ -73,8 +81,10 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 - `supabase/migrations/06_eliminar_contenedores.sql`
 - `supabase/migrations/07_estado_vacio_contenedores.sql`
 - `supabase/migrations/08_lecturas_y_notificaciones_rls.sql`
+- `supabase/migrations/09_roles_y_solicitudes_acceso_rls.sql`
+- `supabase/migrations/10_seed_admin_acceso.sql`
 
-Total de políticas RLS habilitadas en migraciones: 15.
+Total de políticas RLS habilitadas en migraciones: 18.
 
 ### Tablas
 
@@ -87,6 +97,7 @@ Total de políticas RLS habilitadas en migraciones: 15.
 | `PuntosReciclaje` | `01_initial_schema.sql` | Uso operativo del módulo. |
 | `HistorialRutas` | `01_initial_schema.sql` | Uso operativo del módulo. |
 | `Notificaciones` | `01_initial_schema.sql` | Uso operativo del módulo. |
+| `SolicitudesAcceso` | `09_roles_y_solicitudes_acceso_rls.sql` | Uso operativo del módulo. |
 
 ### Detalle de las tablas del Sprint 3
 

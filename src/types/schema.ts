@@ -29,7 +29,9 @@ export type EstadoContenedor =
   | "repleto"
   | "vacio";
 
-export type RolUsuario = "Admin" | "Operador" | "Ciudadano";
+export type RolUsuario = "Admin" | "Gerente" | "Operador" | "Ciudadano";
+
+export type EstadoSolicitud = "pendiente" | "aprobada" | "rechazada";
 
 export type MaterialReciclaje =
   | "organico"
@@ -176,6 +178,25 @@ export type InsertNotificacion = Omit<Notificacion, "id" | "created_at"> & {
 
 export type UpdateNotificacion = Partial<Notificacion>;
 
+export type SolicitudAcceso = {
+  id: string;
+  usuario_id: string;
+  rol_solicitado: RolUsuario;
+  estado: EstadoSolicitud;
+  fecha_solicitud: string;
+  revisado_por: string | null;
+  fecha_revision: string | null;
+}
+
+export type InsertSolicitudAcceso = Omit<SolicitudAcceso, "id" | "fecha_solicitud" | "revisado_por" | "fecha_revision"> & {
+  id?: string;
+  fecha_solicitud?: string;
+  revisado_por?: string | null;
+  fecha_revision?: string | null;
+};
+
+export type UpdateSolicitudAcceso = Partial<SolicitudAcceso>;
+
 export interface Database {
   public: {
     Tables: {
@@ -221,6 +242,12 @@ export interface Database {
         Update: UpdateNotificacion;
         Relationships: [];
       };
+      SolicitudesAcceso: {
+        Row: SolicitudAcceso;
+        Insert: InsertSolicitudAcceso;
+        Update: UpdateSolicitudAcceso;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -241,11 +268,29 @@ export interface Database {
         Args: Record<string, never>;
         Returns: number;
       };
+      aprobar_solicitud_acceso: {
+        Args: {
+          p_solicitud_id: string;
+          p_aprobar: boolean;
+        };
+        Returns: Json;
+      };
+      crear_solicitud_acceso: {
+        Args: {
+          p_email: string;
+          p_password: string;
+          p_nombre: string;
+          p_rol_solicitado: RolUsuario;
+          p_justificacion?: string;
+        };
+        Returns: Json;
+      };
     };
     Enums: {
       tipo_residuo: TipoResiduo;
       estado_contenedor: EstadoContenedor;
       rol_usuario: RolUsuario;
+      estado_solicitud: EstadoSolicitud;
       material_reciclaje: MaterialReciclaje;
       tipo_notificacion: TipoNotificacion;
     };

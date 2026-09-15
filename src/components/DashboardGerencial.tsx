@@ -13,6 +13,8 @@ import {
   suscribirseAlHistorial,
 } from "@/lib/historialRutas";
 import { mostrarToast } from "@/lib/toastStore";
+import { obtenerSnapshotSesion } from "@/lib/authService";
+import { puede, ETIQUETAS_ROL } from "@/lib/rolesAutorizados";
 import {
   analizarContenedores,
   guardarAlertaPredictiva,
@@ -71,6 +73,12 @@ function TarjetaKpi({
 }
 
 export default function DashboardGerencial() {
+  const sesion = useSyncExternalStore(
+    () => () => {},
+    obtenerSnapshotSesion,
+    () => null
+  );
+
   const contenedores = useSyncExternalStore(
     suscribirseAContenedores,
     obtenerSnapshotContenedores,
@@ -241,6 +249,20 @@ export default function DashboardGerencial() {
     }
   };
 
+  if (sesion && !puede(sesion.rol, "ver_dashboard")) {
+    return (
+      <section className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center dark:border-amber-800 dark:bg-amber-950">
+        <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+          Acceso restringido
+        </p>
+        <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+          Tu rol ({ETIQUETAS_ROL[sesion.rol]}) no tiene permiso para ver el dashboard gerencial.
+          Solicita acceso a un administrador.
+        </p>
+      </section>
+    );
+  }
+
   return (
     <section className="flex flex-col gap-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -376,7 +398,7 @@ export default function DashboardGerencial() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {predicciones.map((prediccion) => {
               const enRiesgo = prediccionEstaEnRiesgo(prediccion);
-              return (
+  return (
                 <div
                   key={prediccion.contenedorId}
                   className={`flex flex-col gap-2 rounded-lg border p-3 ${

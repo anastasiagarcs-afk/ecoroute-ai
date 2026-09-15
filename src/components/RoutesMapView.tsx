@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import Map from "@/components/Map";
 import RoutePanel from "@/components/RoutePanel";
+import { obtenerSnapshotSesion } from "@/lib/authService";
+import { puede, ETIQUETAS_ROL } from "@/lib/rolesAutorizados";
 import type { RegistroHistorialRuta } from "@/lib/historialRutas";
 import type { RutaOptimizada } from "@/lib/routeOptimizer";
 import type { Contenedor, UbicacionPunto } from "@/types/schema";
@@ -18,6 +20,14 @@ export default function RoutesMapView({
   centro,
   zoom = 13,
 }: RoutesMapViewProps) {
+  const sesion = useSyncExternalStore(
+    () => () => {},
+    obtenerSnapshotSesion,
+    () => null
+  );
+
+  const puedeOptimizar = !sesion || puede(sesion.rol, "optimizar_rutas");
+
   const [ruta, setRuta] = useState<RutaOptimizada | null>(null);
   const [indiceParadaActual, setIndiceParadaActual] = useState(0);
   const [rutaHistorial, setRutaHistorial] = useState<RegistroHistorialRuta | null>(null);
@@ -95,14 +105,22 @@ export default function RoutesMapView({
           </div>
         )}
       </div>
-      <RoutePanel
-        contenedores={contenedores}
-        centroInicial={centro}
-        onRutaGenerada={manejarRutaGenerada}
-        onCargarRutaHistorial={manejarCargarRutaHistorial}
-        onSalirRutaHistorial={manejarSalirRutaHistorial}
-        rutaHistorialId={rutaHistorial?.id ?? null}
-      />
+      {puedeOptimizar ? (
+        <RoutePanel
+          contenedores={contenedores}
+          centroInicial={centro}
+          onRutaGenerada={manejarRutaGenerada}
+          onCargarRutaHistorial={manejarCargarRutaHistorial}
+          onSalirRutaHistorial={manejarSalirRutaHistorial}
+          rutaHistorialId={rutaHistorial?.id ?? null}
+        />
+      ) : (
+        <div className="rounded-xl border border-zinc-200 bg-white p-4 text-center dark:border-zinc-800 dark:bg-zinc-900">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            Tu rol ({sesion ? ETIQUETAS_ROL[sesion.rol] : "Ciudadano"}) no tiene permiso para optimizar rutas.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

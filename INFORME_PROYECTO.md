@@ -106,8 +106,8 @@ Los requerimientos se derivaron de las Historias de Usuario (HU-01…HU-15) y se
 | RF-22 | Filtros por zona y fechas en el dashboard | HU-09 | Media | **Implementado** | `DashboardGerencial.tsx` (select de zona + rango de fechas) |
 | RF-23 | Reportes exportables (Excel/PDF) | HU-10 | Media | **Implementado** | `reporteExportador.ts` (descarga CSV + impresión PDF con filtros por fecha/zona) |
 | RF-24 | Alertas predictivas por IA (Gemini API) | HU-11 | Alta | **Implementado** | `geminiPredictiveService.ts` (análisis con Gemini + heurística, lecturas de `LecturasSensores`, notificación de riesgo) |
-| RF-25 | Gestión de roles y permisos (Admin/Operador/Ciudadano) | HU-12 | Alta | **Pendiente** | Modelo en enum `rol_usuario`; sin UI de gestión ni Auth UI |
-| RF-26 | Solicitud de acceso y aprobación (pendiente/aprobado/rechazado) | HU-13 | Media | **Pendiente** | Enum `tipo_notificacion` contempla `solicitud_acceso` |
+| RF-25 | Gestión de roles y permisos (Admin/Operador/Ciudadano) | HU-12 | Alta | **Implementado** | `rolesAutorizados.ts` (`puede()`); gates en `DashboardGerencial.tsx`, `RoutesMapView.tsx`; migración `09_roles_y_solicitudes_acceso_rls.sql` |
+| RF-26 | Solicitud de acceso y aprobación (pendiente/aprobado/rechazado) | HU-13 | Media | **Implementado** | `authService.ts` (`registrarCuenta`, `enviarSolicitudAcceso`, `aprobarSolicitud`); `app/acceso/page.tsx` (stepper 2 pasos); tabla `SolicitudesAcceso` + RPC |
 | RF-27 | Cierre de jornada (consolidar km, rutas, combustible, contenedores) | HU-14 | Media | **Pendiente** | La tabla `HistorialRutas` ya almacena los datos base |
 | RF-28 | Detección de anomalías en sensores | HU-15 | Media | **Pendiente** | Tabla `LecturasSensores` lista para el cálculo |
 | RF-29 | Notificaciones visuales (toasts) | HU-06, HU-08 | Media | **Implementado** | `toastStore.ts`; `ToastHost.tsx` (éxito/error/info) |
@@ -153,8 +153,8 @@ Matriz consolidada de las **15 historias de usuario** del proyecto con su rol, d
 | **HU-09** | Dashboard Gerencial | Gerente | Visualizar dashboard con indicadores clave (contenedores, promedio, rutas, toneladas). | Gráficos y tarjetas en tiempo real; filtros por zona y fechas. | RF-21, RF-22 | ✅ Implementado |
 | **HU-10** | Reportes Exportables | Gerente | Generar reportes automáticos exportables (Excel/PDF) del historial de rutas. | Exportación con filtros por fecha y zona; formato profesional. | RF-23 | ✅ Implementado |
 | **HU-11** | Alertas Predictivas (IA) | Gerente | Recibir alertas predictivas (IA) sobre contenedores que alcanzarán capacidad máxima. | Integración con Gemini API; alerta si la probabilidad >85% en <4 horas. | RF-24 | ✅ Implementado |
-| **HU-12** | Gestión de Roles | Administrador | Gestionar roles y permisos (Admin, Operador, Ciudadano). | Supabase Auth + RLS; asignación exclusiva por Admin. | RF-25 | ⛔ Pendiente |
-| **HU-13** | Solicitud de Acceso | Operador | Registrarse y solicitar acceso al sistema para aprobación. | Formulario con datos; notificación al Admin; estado (pendiente/aprobado/rechazado). | RF-26 | ⛔ Pendiente |
+| **HU-12** | Gestión de Roles | Administrador | Gestionar roles y permisos (Admin, Operador, Ciudadano). | Supabase Auth + RLS; asignación exclusiva por Admin; gates por rol en dashboard y mapa. | RF-25 | ✅ Implementado |
+| **HU-13** | Solicitud de Acceso | Operador | Registrarse y solicitar acceso al sistema para aprobación. | Registro email/password → solicitud de rol (Gerente/Operador); Admin aprueba/rechaza vía RPC. | RF-26 | ✅ Implementado |
 | **HU-14** | Cierre de Jornada | Operador | Registrar el cierre de jornada con el detalle de rutas ejecutadas. | Botón «Cerrar Jornada» que consolida km, rutas, combustible y contenedores atendidos. | RF-27 | ⛔ Pendiente |
 | **HU-15** | Detección de Anomalías | Gerente | Comparar nivel real vs. esperado para detectar sensores descalibrados. | Cálculo de desviaciones estadísticas; alerta por datos anómalos (>7 días constante). | RF-28 | ⛔ Pendiente |
 
@@ -410,12 +410,14 @@ flowchart TB
 
 ### Flujo principal
 
-1. **Cliente (`NEX`)** usa `@supabase/ssr` con la clave anónima; cada tabla está protegida por RLS.
-2. **Mapa (`MAP`)** muestra contenedores con marcadores coloreados y rutas con polilíneas; los popups se renderizan con `createRoot` (`Map.tsx:247`).
-3. **Almacenes (`STORE`)** exponen snapshots estables consumidos con `useSyncExternalStore` para evitar bucles SSR en React 19.
-4. **Routing (`OSRM`)** calcula la ruta vehicular; si falla, se usa línea recta (Haversine).
-5. **Automatización (`N8N`)** recibe el registro de reciclaje por webhook y, si no responde en 6 s, se usa el fallback directo a Supabase.
-6. **IA (`GEMINI`)** alimenta las alertas predictivas del Sprint 4 (HU-11).
+1. **Portal Guest-First (`/`)**: Los visitantes sin sesión ven una página de bienvenida con mapa preview de contenedores demo y 3 accesos directos: "Explorar como Ciudadano" (→ `/separacion`), "Iniciar Sesión" (→ `/acceso`), "Crear Cuenta / Solicitar Rol" (→ `/acceso`). Los usuarios autenticados ven el dashboard gerencial + mapa interactivo con gates de rol.
+2. **Cliente (`NEX`)** usa `@supabase/ssr` con la clave anónima; cada tabla está protegida por RLS. El middleware protege `/dashboard`, `/mapa`, `/rutas`, `/admin` (solo sesión); `/separacion` es pública.
+3. **Mapa (`MAP`)** muestra contenedores con marcadores coloreados y rutas con polilíneas; los popups se renderizan con `createRoot` (`Map.tsx:247`). Visible sin autenticación (preview en portal Guest-First).
+4. **Almacenes (`STORE`)** exponen snapshots estables consumidos con `useSyncExternalStore` para evitar bucles SSR en React 19.
+5. **Routing (`OSRM`)** calcula la ruta vehicular; si falla, se usa línea recta (Haversine).
+6. **Automatización (`N8N`)** recibe el registro de reciclaje por webhook y, si no responde en 6 s, se usa el fallback directo a Supabase.
+7. **IA (`GEMINI`)** alimenta las alertas predictivas del Sprint 4 (HU-11).
+8. **Roles y permisos**: `puede(rol, accion)` retorna `true` siempre para `Admin` (superusuario). Los demás roles siguen la matriz estricta: Ciudadano (mapa, separación, reciclaje), Operador (+ gestión contenedores, optimización rutas), Gerente (+ dashboard, reportes, IA).
 
 ---
 
@@ -558,16 +560,24 @@ npm install
 #    NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 #    NEXT_PUBLIC_N8N_WEBHOOK_URL=...   (opcional)
 
-# 4. Iniciar servidor de desarrollo
+# 4. Aplicar migraciones de base de datos
+#    En Supabase SQL Editor, ejecutar en orden las migraciones de supabase/migrations/
+
+# 5. Sembrar usuario Admin (primera vez)
+#    Registrate en /acceso con un email y contraseña.
+#    En Supabase SQL Editor: SELECT public.seed_admin();
+#    Recarga la pagina. Ahora tu usuario tiene rol Admin.
+
+# 6. Iniciar servidor de desarrollo
 npm run dev
 # Abrir http://localhost:3000
 
-# 5. Validaciones de calidad
+# 7. Validaciones de calidad
 npx tsc --noEmit     # tipos
 npm run lint         # linter ESLint
-npm run build        # build de producción
+npm run build        # build de produccion
 
-# 6. Regenerar la bitácora desde el código
+# 8. Regenerar la bitacora desde el codigo
 npm run informe
 ```
 
@@ -623,8 +633,9 @@ Subir el video explicativo de la funcionalidad del proyecto a **Google Drive** c
 | Sprint 1 | Base de datos (schema + migraciones), mapas y monitoreo de contenedores | ✅ Completado |
 | Sprint 2 | Optimización de rutas (OSRM), historial y persistencia en Supabase | ✅ Completado |
 | Sprint 3 | Separación en la fuente, registro de reciclaje, gamificación y dashboard gerencial | ✅ Completado |
-| Sprint 4 | Analítica, IA predictiva, reportes y stepper de mapa | 🔄 En Desarrollo |
+| Sprint 4 | Analítica, IA predictiva, reportes y stepper de mapa | ✅ Completado |
+| Sprint 5 | Autenticación email/password, roles y solicitudes de acceso | ✅ Completado |
 
-**Sprint 3**: ✅ Completado (HU-01 a HU-09).
+**Sprint 4**: ✅ Completado (HU-05/RF-13 stepper mapa, HU-10/RF-23 reportes CSV/PDF, HU-11/RF-24 predicciones IA Gemini).
 
-**Sprint 4 (parcial)**: ✅ HU-05/RF-13 (stepper interactivo en mapa), ✅ HU-10/RF-23 (reportes CSV/PDF), ✅ HU-11/RF-24 (predicciones IA con Gemini). Pendiente: **HU-12** (Roles), **HU-13** (Solicitud de Acceso), **HU-14** (Cierre de Jornada), **HU-15** (Anomalías).
+**Sprint 5**: ✅ Completado. HU-12/RF-25 (roles: enum `Gerente`, `puede()` con short-circuit Admin superusuario, gates), HU-13/RF-26 (auth + solicitudes: `authService.ts`, `adminService.ts`, `app/acceso/page.tsx`, `app/admin/page.tsx`, tabla `SolicitudesAcceso`, RPCs `aprobar_solicitud_acceso`/`crear_solicitud_acceso`, seed Admin `10_seed_admin_acceso.sql`). Home Guest-First con preview del mapa, `/separacion` pública, matriz de permisos por rol según especificación UNEG. Pendiente: **HU-14** (Cierre de Jornada), **HU-15** (Anomalías).
