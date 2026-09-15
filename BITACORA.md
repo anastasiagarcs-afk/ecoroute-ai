@@ -1,5 +1,5 @@
 # Bitácora del Proyecto — EcoRoute AI
-> Documento generado automáticamente el 15 de septiembre de 2026 a las 01:28 a. m. por `npm run informe`. No editar a mano: se regenera desde el código para mantenerse al día.
+> Documento generado automáticamente el 15 de septiembre de 2026 a las 02:16 a. m. por `npm run informe`. No editar a mano: se regenera desde el código para mantenerse al día.
 > **Nota**: Este archivo es el registro cronológico automático. Para el informe académico formal, ver `INFORME_PROYECTO.md`.
 
 ## 1. Arquitectura y Stack Tecnológico
@@ -21,9 +21,7 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 | --- | --- | --- |
 | Sprint 1 | Base de datos (schema + migraciones), mapas y monitoreo de contenedores | Completado |
 | Sprint 2 | Optimización de rutas (OSRM), historial y persistencia en Supabase | Completado |
-| Sprint 3 | Separación en la fuente, registro de reciclaje, gamificación y dashboard gerencial | Completado |
-| Sprint 4 | Analítica, IA predictiva, reportes y stepper de mapa | Completado |
-| Sprint 5 | Autenticación, roles, solicitudes de acceso, Home Guest-First (HU-12, HU-13) | Completado |
+| Sprint 3 | Separación en la fuente, registro de reciclaje y gamificación | En Desarrollo |
 
 ## 3. Componentes de la aplicación
 
@@ -54,7 +52,7 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 
 | Módulo | Líneas | Descripción |
 | --- | --- | --- |
-| `src/lib/adminService.ts` | 39 | — |
+| `src/lib/adminService.ts` | 41 | — |
 | `src/lib/authService.ts` | 167 | — |
 | `src/lib/contenedoresStore.ts` | 671 | Almacén de contenedores: carga y semilla desde Supabase, normalización de ubicación (objeto, GeoJSON, EWKT o WKB/EWKB hexadecimal con parseFloat), datos de respaldo en localStorage y registro, vaciado (0% y estado vacio), edición y eliminación en tiempo real. |
 | `src/lib/gamificacion.ts` | 190 | Lógica pura de gamificación: puntos por kg según material, niveles de ciudadano, progreso y catálogo de recompensas. |
@@ -83,6 +81,7 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 - `supabase/migrations/08_lecturas_y_notificaciones_rls.sql`
 - `supabase/migrations/09_roles_y_solicitudes_acceso_rls.sql`
 - `supabase/migrations/10_seed_admin_acceso.sql`
+- `supabase/migrations/11_aprobar_solicitud_rol_asignado.sql`
 
 Total de políticas RLS habilitadas en migraciones: 18.
 

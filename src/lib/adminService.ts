@@ -1,5 +1,5 @@
 import { createBrowserClient } from "@supabase/ssr";
-import type { Database, SolicitudAcceso, Usuario } from "@/types/schema";
+import type { Database, RolUsuario, SolicitudAcceso, Usuario } from "@/types/schema";
 
 type SolicitudConUsuario = SolicitudAcceso & { Usuarios: Usuario };
 
@@ -26,12 +26,14 @@ export async function listarSolicitudesPendientes(): Promise<
 
 export async function aprobarSolicitud(
   solicitudId: string,
-  aprobar: boolean
+  aprobar: boolean,
+  rolAsignado?: RolUsuario
 ): Promise<{ exito: boolean; error?: string }> {
   const supabase = crearCliente();
   const { error } = await supabase.rpc("aprobar_solicitud_acceso", {
     p_solicitud_id: solicitudId,
     p_aprobar: aprobar,
+    p_rol_asignado: rolAsignado ?? null,
   });
   if (error) return { exito: false, error: error.message };
   return { exito: true };

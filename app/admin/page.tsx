@@ -10,7 +10,7 @@ import {
 import { mostrarToast } from "@/lib/toastStore";
 import { obtenerSnapshotSesion, cerrarSesion } from "@/lib/authService";
 import { puede, ETIQUETAS_ROL } from "@/lib/rolesAutorizados";
-import type { SolicitudAcceso, Usuario } from "@/types/schema";
+import type { RolUsuario, SolicitudAcceso, Usuario } from "@/types/schema";
 
 type SolicitudConUsuario = SolicitudAcceso & { Usuarios: Usuario };
 
@@ -41,14 +41,14 @@ export default function AdminPage() {
     return () => { activo = false; };
   }, [puedeAprobar]);
 
-  async function manejarDecision(solicitudId: string, aprobar: boolean) {
+  async function manejarDecision(solicitudId: string, aprobar: boolean, rolAsignado?: RolUsuario) {
     setProcesando(solicitudId);
-    const resultado = await aprobarSolicitud(solicitudId, aprobar);
+    const resultado = await aprobarSolicitud(solicitudId, aprobar, rolAsignado);
     if (resultado.exito) {
       mostrarToast(
         aprobar ? "Solicitud aprobada" : "Solicitud rechazada",
         aprobar
-          ? "El usuario ahora tiene el rol solicitado."
+          ? `El usuario ahora tiene rol ${rolAsignado ? ETIQUETAS_ROL[rolAsignado] : "solicitado"}.`
           : "La solicitud fue rechazada.",
         "exito"
       );
@@ -191,20 +191,36 @@ export default function AdminPage() {
                       { day: "numeric", month: "short", year: "numeric" }
                     )}
                   </td>
-                  <td className="flex justify-end gap-2 px-4 py-3">
+                  <td className="flex flex-wrap justify-end gap-1.5 px-4 py-3">
                     <button
                       type="button"
                       disabled={procesando === solicitud.id}
-                      onClick={() => manejarDecision(solicitud.id, true)}
-                      className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+                      onClick={() => manejarDecision(solicitud.id, true, "Admin")}
+                      className="rounded-lg bg-violet-600 px-2.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-violet-700 disabled:opacity-50"
                     >
-                      {procesando === solicitud.id ? "..." : "Aprobar"}
+                      {procesando === solicitud.id ? "..." : "Aprobar como Admin"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={procesando === solicitud.id}
+                      onClick={() => manejarDecision(solicitud.id, true, "Gerente")}
+                      className="rounded-lg bg-blue-600 px-2.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      {procesando === solicitud.id ? "..." : "Aprobar como Gerente"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={procesando === solicitud.id}
+                      onClick={() => manejarDecision(solicitud.id, true, "Operador")}
+                      className="rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+                    >
+                      {procesando === solicitud.id ? "..." : "Aprobar como Operador"}
                     </button>
                     <button
                       type="button"
                       disabled={procesando === solicitud.id}
                       onClick={() => manejarDecision(solicitud.id, false)}
-                      className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 ring-1 ring-inset ring-red-600/20 transition-colors hover:bg-red-100 disabled:opacity-50 dark:bg-red-500/10 dark:text-red-400 dark:ring-red-400/20 dark:hover:bg-red-500/20"
+                      className="rounded-lg bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700 ring-1 ring-inset ring-red-600/20 transition-colors hover:bg-red-100 disabled:opacity-50 dark:bg-red-500/10 dark:text-red-400 dark:ring-red-400/20 dark:hover:bg-red-500/20"
                     >
                       {procesando === solicitud.id ? "..." : "Rechazar"}
                     </button>

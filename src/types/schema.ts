@@ -272,6 +272,7 @@ export interface Database {
         Args: {
           p_solicitud_id: string;
           p_aprobar: boolean;
+          p_rol_asignado?: RolUsuario | null;
         };
         Returns: Json;
       };
