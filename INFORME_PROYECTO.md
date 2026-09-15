@@ -94,7 +94,7 @@ Los requerimientos se derivaron de las Historias de Usuario (HU-01…HU-15) y se
 | RF-10 | Priorizar contenedores críticos (>80%) | HU-04 | Alta | **Implementado** | `routeOptimizer.ts:126-144` |
 | RF-11 | Mostrar distancia total y tiempo estimado | HU-04 | Alta | **Implementado** | `routeOptimizer.ts:243-249`; `RoutePanel.tsx:376-398` |
 | RF-12 | Trazar polilínea de la ruta sobre el mapa | HU-05 | Alta | **Implementado** | `Map.tsx:318-365` (`L.polyline`) |
-| RF-13 | Resaltar contenedor actual y siguiente | HU-05 | Media | **Pendiente** | Polilínea completa; sin resaltado por segmento |
+| RF-13 | Resaltar contenedor actual y siguiente | HU-05 | Media | **Implementado** | `RoutesMapView.tsx` (stepper con parada actual/siguiente, colores `COLOR_EMERALD`/`COLOR_QUARTZ` en `Map.tsx`) |
 | RF-14 | Alertar contenedores que superen 80% | HU-06 | Alta | **Implementado** | `DashboardGerencial.tsx` (tabla + contador de críticos) |
 | RF-15 | Marcar alerta como «atendido» | HU-06 | Media | **Implementado** | `DashboardGerencial.tsx` (botón «Atender / Vaciar» → `vaciarContenedor`) |
 | RF-16 | Mostrar guías de separación por material (públicas) | HU-07 | Alta | **Implementado** | `SeparacionGuia.tsx`; ruta `/separacion` |
@@ -104,8 +104,8 @@ Los requerimientos se derivaron de las Historias de Usuario (HU-01…HU-15) y se
 | RF-20 | Mostrar niveles, progreso y catálogo de recompensas | HU-08 | Media | **Implementado** | `GamificacionPanel.tsx`; `gamificacion.ts:82-190` |
 | RF-21 | Dashboard gerencial con KPIs (contenedores, promedio, rutas, toneladas) | HU-09 | Alta | **Implementado** | `DashboardGerencial.tsx` (tarjetas KPI) |
 | RF-22 | Filtros por zona y fechas en el dashboard | HU-09 | Media | **Implementado** | `DashboardGerencial.tsx` (select de zona + rango de fechas) |
-| RF-23 | Reportes exportables (Excel/PDF) | HU-10 | Media | **Pendiente** | — |
-| RF-24 | Alertas predictivas por IA (Gemini API) | HU-11 | Alta | **Pendiente** | Solo enum `alerta_predictiva` en `01_initial_schema.sql` |
+| RF-23 | Reportes exportables (Excel/PDF) | HU-10 | Media | **Implementado** | `reporteExportador.ts` (descarga CSV + impresión PDF con filtros por fecha/zona) |
+| RF-24 | Alertas predictivas por IA (Gemini API) | HU-11 | Alta | **Implementado** | `geminiPredictiveService.ts` (análisis con Gemini + heurística, lecturas de `LecturasSensores`, notificación de riesgo) |
 | RF-25 | Gestión de roles y permisos (Admin/Operador/Ciudadano) | HU-12 | Alta | **Pendiente** | Modelo en enum `rol_usuario`; sin UI de gestión ni Auth UI |
 | RF-26 | Solicitud de acceso y aprobación (pendiente/aprobado/rechazado) | HU-13 | Media | **Pendiente** | Enum `tipo_notificacion` contempla `solicitud_acceso` |
 | RF-27 | Cierre de jornada (consolidar km, rutas, combustible, contenedores) | HU-14 | Media | **Pendiente** | La tabla `HistorialRutas` ya almacena los datos base |
@@ -146,13 +146,13 @@ Matriz consolidada de las **15 historias de usuario** del proyecto con su rol, d
 | **HU-02** | Visualización en Mapa | Operador | Visualizar en un mapa interactivo todos los contenedores con su nivel de llenado. | Marcadores por color (<50% verde, 50–80% amarillo, >80% rojo); actualización cada 5 min. | RF-04, RF-05, RF-06, RF-08 | ✅ Implementado |
 | **HU-03** | Consulta de Contenedores | Operador | Consultar el nivel de llenado actual de un contenedor específico. | Popup con ID, ubicación, tipo de residuo, nivel (%) y última lectura. | RF-07 | ✅ Implementado |
 | **HU-04** | Optimización de Rutas | Administrador | Generar una ruta óptima basada en los contenedores con mayor nivel de llenado. | Algoritmo TSP heurístico; prioriza llenado >80%; muestra distancia total y tiempo. | RF-09, RF-10, RF-11, RF-31 | ✅ Implementado |
-| **HU-05** | Visualización de Rutas | Operador | Visualizar la ruta generada en el mapa para seguir el recorrido asignado. | Polilínea sobre mapa; resalta contenedor actual y siguiente. | RF-12, RF-13 | 🟡 Parcial (falta RF-13) |
+| **HU-05** | Visualización de Rutas | Operador | Visualizar la ruta generada en el mapa para seguir el recorrido asignado. | Polilínea sobre mapa; resalta contenedor actual y siguiente. | RF-12, RF-13 | ✅ Implementado |
 | **HU-06** | Alertas de Llenado | Administrador | Recibir alerta visual cuando un contenedor supere el 80% de su capacidad. | Lista de críticos en dashboard; notificación emergente; opción «atendido». | RF-14, RF-15, RF-29 | ✅ Implementado |
 | **HU-07** | Guías de Separación | Ciudadano | Consultar guías visuales de separación de residuos por material. | Contenido estático visual; acceso público sin login. | RF-16 | ✅ Implementado |
 | **HU-08** | Registro de Reciclaje | Ciudadano | Registrar reciclajes exitosos y acumular puntos de recompensa. | Formulario por kg; sumatoria automática de puntos; historial visible. | RF-17, RF-18, RF-19, RF-20, RF-30 | ✅ Implementado |
 | **HU-09** | Dashboard Gerencial | Gerente | Visualizar dashboard con indicadores clave (contenedores, promedio, rutas, toneladas). | Gráficos y tarjetas en tiempo real; filtros por zona y fechas. | RF-21, RF-22 | ✅ Implementado |
-| **HU-10** | Reportes Exportables | Gerente | Generar reportes automáticos exportables (Excel/PDF) del historial de rutas. | Exportación con filtros por fecha y zona; formato profesional. | RF-23 | ⛔ Pendiente |
-| **HU-11** | Alertas Predictivas (IA) | Gerente | Recibir alertas predictivas (IA) sobre contenedores que alcanzarán capacidad máxima. | Integración con Gemini API; alerta si la probabilidad >85% en <4 horas. | RF-24 | ⛔ Pendiente |
+| **HU-10** | Reportes Exportables | Gerente | Generar reportes automáticos exportables (Excel/PDF) del historial de rutas. | Exportación con filtros por fecha y zona; formato profesional. | RF-23 | ✅ Implementado |
+| **HU-11** | Alertas Predictivas (IA) | Gerente | Recibir alertas predictivas (IA) sobre contenedores que alcanzarán capacidad máxima. | Integración con Gemini API; alerta si la probabilidad >85% en <4 horas. | RF-24 | ✅ Implementado |
 | **HU-12** | Gestión de Roles | Administrador | Gestionar roles y permisos (Admin, Operador, Ciudadano). | Supabase Auth + RLS; asignación exclusiva por Admin. | RF-25 | ⛔ Pendiente |
 | **HU-13** | Solicitud de Acceso | Operador | Registrarse y solicitar acceso al sistema para aprobación. | Formulario con datos; notificación al Admin; estado (pendiente/aprobado/rechazado). | RF-26 | ⛔ Pendiente |
 | **HU-14** | Cierre de Jornada | Operador | Registrar el cierre de jornada con el detalle de rutas ejecutadas. | Botón «Cerrar Jornada» que consolida km, rutas, combustible y contenedores atendidos. | RF-27 | ⛔ Pendiente |
@@ -272,7 +272,7 @@ La **HU-11** especifica alertas que informan con antelación qué contenedores a
 3. Gemini responde en JSON: `{ contenedor_id, probabilidad, horas_estimadas }`.
 4. Si `probabilidad > 85%` y `horas_estimadas < 4 h`, se genera una **Notificación** tipo `alerta_predictiva` (el enum ya existe en `01_initial_schema.sql:41`).
 
-> **Estado**: pendiente para el Sprint 4. El modelo de datos está preparado; falta la ruta de integración con la API y la UI.
+> **Estado**: ✅ Implementado en Sprint 4. `geminiPredictiveService.ts` consulta `LecturasSensores`, aplica heurística y Gemini API, y genera predicciones con probabilidad y horas estimadas.
 
 **Prompt de diseño planificado** (✏️ completar con el prompt real usado):
 
@@ -415,7 +415,7 @@ flowchart TB
 3. **Almacenes (`STORE`)** exponen snapshots estables consumidos con `useSyncExternalStore` para evitar bucles SSR en React 19.
 4. **Routing (`OSRM`)** calcula la ruta vehicular; si falla, se usa línea recta (Haversine).
 5. **Automatización (`N8N`)** recibe el registro de reciclaje por webhook y, si no responde en 6 s, se usa el fallback directo a Supabase.
-6. **IA (`GEMINI`)** alimentará las alertas predictivas del Sprint 4.
+6. **IA (`GEMINI`)** alimenta las alertas predictivas del Sprint 4 (HU-11).
 
 ---
 
@@ -623,8 +623,8 @@ Subir el video explicativo de la funcionalidad del proyecto a **Google Drive** c
 | Sprint 1 | Base de datos (schema + migraciones), mapas y monitoreo de contenedores | ✅ Completado |
 | Sprint 2 | Optimización de rutas (OSRM), historial y persistencia en Supabase | ✅ Completado |
 | Sprint 3 | Separación en la fuente, registro de reciclaje, gamificación y dashboard gerencial | ✅ Completado |
-| Sprint 4 | Analítica, IA predictiva, notificaciones y entrega final | ⛔ Pendiente |
+| Sprint 4 | Analítica, IA predictiva, reportes y stepper de mapa | 🔄 En Desarrollo |
 
 **Sprint 3**: ✅ Completado (HU-01 a HU-09).
 
-**Pendiente para el Sprint 4**: **HU-10** (Reportes), **HU-11** (IA Predictiva Gemini), **HU-12** (Roles), **HU-13** (Solicitud de Acceso), **HU-14** (Cierre de Jornada), **HU-15** (Anomalías). Pendiente parcial: **HU-05** (RF-13: resaltado del contenedor actual/siguiente durante el recorrido).
+**Sprint 4 (parcial)**: ✅ HU-05/RF-13 (stepper interactivo en mapa), ✅ HU-10/RF-23 (reportes CSV/PDF), ✅ HU-11/RF-24 (predicciones IA con Gemini). Pendiente: **HU-12** (Roles), **HU-13** (Solicitud de Acceso), **HU-14** (Cierre de Jornada), **HU-15** (Anomalías).

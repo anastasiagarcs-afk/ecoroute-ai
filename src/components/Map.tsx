@@ -27,6 +27,8 @@ const ZOOM_POR_DEFECTO = 13;
 const ZOOM_MINIMO = 11;
 
 const COLOR_RUTA = "#2563eb";
+const COLOR_EMERALD = "#10b981";
+const COLOR_QUARTZ = "#a8a29e";
 
 let moduloLeaflet: typeof import("leaflet") | null = null;
 
@@ -44,6 +46,8 @@ interface MapaProps {
   onSelectContenedor?: (contenedor: Contenedor) => void;
   rutaPuntos?: UbicacionPunto[];
   ajustarVistaARuta?: boolean;
+  paradasRuta?: UbicacionPunto[];
+  indiceParadaActual?: number;
 }
 
 function colorPorNivel(nivel: number): string {
@@ -108,6 +112,8 @@ function MapaContenedores({
   onSelectContenedor,
   rutaPuntos = [],
   ajustarVistaARuta = true,
+  paradasRuta = undefined,
+  indiceParadaActual = undefined,
 }: MapaProps) {
   const contenedorRef = useRef<HTMLDivElement>(null);
   const mapaRef = useRef<LeafletMap | null>(null);
@@ -351,6 +357,33 @@ return () => {
         fillColor: COLOR_RUTA,
         fillOpacity: 1,
       }).addTo(capa);
+
+      if (paradasRuta && indiceParadaActual !== undefined) {
+        if (paradasRuta[indiceParadaActual]) {
+          const actual = paradasRuta[indiceParadaActual];
+          L.circleMarker([actual.lat, actual.lng], {
+            radius: 9,
+            color: COLOR_EMERALD,
+            weight: 4,
+            fillColor: COLOR_EMERALD,
+            fillOpacity: 0.9,
+          })
+            .bindTooltip("Parada actual", { direction: "top", permanent: false })
+            .addTo(capa);
+        }
+        const siguiente = paradasRuta[indiceParadaActual + 1];
+        if (siguiente) {
+          L.circleMarker([siguiente.lat, siguiente.lng], {
+            radius: 8,
+            color: COLOR_QUARTZ,
+            weight: 3,
+            fillColor: "#ffffff",
+            fillOpacity: 1,
+          })
+            .bindTooltip("Siguiente parada", { direction: "top", permanent: false })
+            .addTo(capa);
+        }
+      }
 
       if (ajustarVistaARuta) {
         mapaRef.current.fitBounds(L.latLngBounds(latlngs), { padding: [40, 40] });

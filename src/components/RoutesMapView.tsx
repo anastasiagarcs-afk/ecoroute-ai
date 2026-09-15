@@ -19,10 +19,12 @@ export default function RoutesMapView({
   zoom = 13,
 }: RoutesMapViewProps) {
   const [ruta, setRuta] = useState<RutaOptimizada | null>(null);
+  const [indiceParadaActual, setIndiceParadaActual] = useState(0);
   const [rutaHistorial, setRutaHistorial] = useState<RegistroHistorialRuta | null>(null);
 
   const manejarRutaGenerada = useCallback((nueva: RutaOptimizada | null) => {
     setRuta(nueva);
+    setIndiceParadaActual(0);
     setRutaHistorial(null);
   }, []);
 
@@ -41,7 +43,42 @@ export default function RoutesMapView({
   return (
     <div className="grid w-full grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
       <div className="relative h-[60vh] w-full overflow-hidden rounded-2xl border border-zinc-200 shadow-sm dark:border-zinc-800 lg:h-[65vh]">
-        <Map contenedores={contenedores} centro={centro} zoom={zoom} rutaPuntos={rutaPuntos} />
+        <Map
+          contenedores={contenedores}
+          centro={centro}
+          zoom={zoom}
+          rutaPuntos={rutaPuntos}
+          paradasRuta={rutaPuntos}
+          indiceParadaActual={indiceParadaActual}
+        />
+
+        {rutaPuntos.length > 0 && (
+          <div className="absolute bottom-3 left-3 z-[1000] flex max-w-[calc(100%-1.5rem)] items-center gap-2 rounded-lg border border-emerald-300 bg-white/95 px-3 py-1.5 shadow-md backdrop-blur dark:border-emerald-500/40 dark:bg-zinc-900/95">
+            <span className="min-w-0 truncate text-xs font-medium text-emerald-800 dark:text-emerald-300">
+              Parada actual ·{" "}
+              <strong>{indiceParadaActual + 1}</strong> de {rutaPuntos.length}
+            </span>
+            {indiceParadaActual < rutaPuntos.length - 1 ? (
+              <button
+                type="button"
+                onClick={() =>
+                  setIndiceParadaActual((indice) => Math.min(indice + 1, rutaPuntos.length - 1))
+                }
+                className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700"
+              >
+                Siguiente →
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIndiceParadaActual(0)}
+                className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-emerald-700"
+              >
+                Reiniciar ↺
+              </button>
+            )}
+          </div>
+        )}
 
         {rutaHistorial && (
           <div className="absolute left-3 top-3 z-[1000] flex max-w-[calc(100%-1.5rem)] items-center gap-2 rounded-lg border border-blue-300 bg-white/95 px-3 py-2 shadow-md backdrop-blur dark:border-blue-500/40 dark:bg-zinc-900/95">

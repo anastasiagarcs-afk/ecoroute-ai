@@ -13,6 +13,17 @@ import {
   suscribirseAlHistorial,
 } from "@/lib/historialRutas";
 import { mostrarToast } from "@/lib/toastStore";
+import {
+  analizarContenedores,
+  guardarAlertaPredictiva,
+  prediccionEstaEnRiesgo,
+  type PrediccionContenedor,
+} from "@/lib/geminiPredictiveService";
+import {
+  descargarCSV,
+  imprimirReporte,
+  type FiltrosExportacion,
+} from "@/lib/reporteExportador";
 import type { Contenedor } from "@/types/schema";
 
 const UMBRAL_MEDIO = 50;
@@ -82,6 +93,51 @@ export default function DashboardGerencial() {
   const [zonaSeleccionada, setZonaSeleccionada] = useState("Todas");
   const [fechaDesde, setFechaDesde] = useState("");
   const [fechaHasta, setFechaHasta] = useState("");
+
+  const [predicciones, setPredicciones] = useState<PrediccionContenedor[]>([]);
+  const [analizandoPrediccion, setAnalizandoPrediccion] = useState(false);
+
+  const formatearHoras = (horas: number): string => {
+    const horasCercanas = Math.max(0, horas);
+    if (horasCercanas < 1)
+      return "menos de 1 hora";
+    const horasEnteras = Math.floor(horasCercanas);
+    const minutos = Math.round((horasCercanas - horasEnteras) * 60);
+    return minutos > 0
+      ? `${horasEnteras} h ${minutos} min`
+      : `${horasEnteras} h`;
+  };
+
+  const ejecutarPrediccionIA = async () => {
+    setAnalizandoPrediccion(true);
+    try {
+      const resultado = await analizarContenedores(contenedoresFiltrados);
+      setPredicciones(resultado);
+      if (resultado.length === 0) {
+        mostrarToast("No se pudo obtener una predicción", "info");
+      }
+    } catch {
+      mostrarToast("Error al analizar los contenedores", "error");
+    } finally {
+      setAnalizandoPrediccion(false);
+    }
+  };
+
+  const guardarAlertaPredictiva = async (prediccion: PrediccionContenedor) => {
+    try {
+      await guardarAlertaPredictiva(prediccion);
+      mostrarToast(
+        `Alerta del contenedor ${prediccion.codigo} registrada`,
+        "exito",
+      );
+    } catch {
+      mostrarToast("Error al notificar el riesgo", "error");
+    }
+  };
+
+  const notificarRiesgo = (prediccion: PrediccionContenedor) => {
+    void guardarAlertaPredictiva(prediccion);
+  };
 
   const limpiarFiltros = () => {
     setZonaSeleccionada("Todas");
@@ -238,6 +294,32 @@ export default function DashboardGerencial() {
           >
             Limpiar filtros
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              descargarCSV(contenedoresFiltrados, rutasFiltradas, {
+                zona: zonaSeleccionada === "Todas" ? "Todas" : zonaSeleccionada,
+                fechaDesde,
+                fechaHasta,
+              });
+            }}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+          >
+            Exportar CSV
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              imprimirReporte(contenedoresFiltrados, rutasFiltradas, {
+                zona: zonaSeleccionada === "Todas" ? "Todas" : zonaSeleccionada,
+                fechaDesde,
+                fechaHasta,
+              })
+            }
+            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-600 bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 dark:border-emerald-500 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20"
+          >
+            Exportar PDF
+          </button>
         </div>
       </div>
 
@@ -253,8 +335,7 @@ export default function DashboardGerencial() {
           valor={`${promedioLlenado}%`}
           detalle="General de la selección"
           colorPunto="bg-blue-500"
-        />
-        <TarjetaKpi
+        />        <TarjetaKpi
           etiqueta="Contenedores críticos"
           valor={criticos.length}
           detalle="> 80% de capacidad"
@@ -266,6 +347,103 @@ export default function DashboardGerencial() {
           detalle={rangoFechas}
           colorPunto="bg-emerald-500"
         />
+      </div>
+
+      <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+              Predicción de IA (HU-11)
+            </h3>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              Estimación con Gemini de riesgo de desborde en las próximas horas
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={ejecutarPrediccionIA}
+            disabled={analizandoPrediccion}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-emerald-600"
+          >
+            {analizandoPrediccion ? "Analizando…" : "Analizar con IA"}
+          </button>
+        </div>
+        {predicciones.length === 0 ? (
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            Toca <strong>Analizar con IA</strong> para generar la estimación predictiva.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {predicciones.map((prediccion) => {
+              const enRiesgo = prediccionEstaEnRiesgo(prediccion);
+              return (
+                <div
+                  key={prediccion.contenedorId}
+                  className={`flex flex-col gap-2 rounded-lg border p-3 ${
+                    enRiesgo
+                      ? "border-red-300 bg-red-50 dark:border-red-500/40 dark:bg-red-500/10"
+                      : "border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-800/40"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+                        {prediccion.codigo}
+                      </p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                        {prediccion.zona ?? "Sin zona"}
+                      </p>
+                    </div>
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                        enRiesgo
+                          ? "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300"
+                          : "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300"
+                      }`}
+                    >
+                      {enRiesgo ? "Riesgo" : "Normal"}
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-1 text-xl font-bold text-zinc-900 dark:text-zinc-50">
+                    {prediccion.nivelProyectadoEn4h}%
+                    <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400">
+                      proyectado en 4h · actual {prediccion.nivelActual}%
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-300">
+                    <span>
+                      Crítico en{" "}
+                      <strong>
+                        {formatearHoras(prediccion.horasParaCritico)}
+                      </strong>
+                    </span>
+                    <span className="text-zinc-500 dark:text-zinc-400">
+                      {Math.round(prediccion.probabilidad * 100)}% prob.
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
+                      {prediccion.fuente === "gemini"
+                        ? "Gemini"
+                        : prediccion.fuente === "sintetizada"
+                          ? "Sintetizada"
+                          : "Heurística"}
+                    </span>
+                    {enRiesgo && (
+                      <button
+                        type="button"
+                        onClick={() => void notificarRiesgo(prediccion)}
+                        className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
+                      >
+                        Notificar a conductor
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
