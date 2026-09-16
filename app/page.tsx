@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore, useState } from "react";
+import { useEffect, useSyncExternalStore, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import DashboardGerencial from "@/components/DashboardGerencial";
@@ -13,6 +13,7 @@ import {
   obtenerSnapshotServidorContenedores,
   obtenerSnapshotServidorEstadoContenedores,
   suscribirseAContenedores,
+  suscribirseRealtimeContenedores,
 } from "@/lib/contenedoresStore";
 import { estaSupabaseConfigurado } from "@/lib/supabaseClient";
 import { obtenerSnapshotSesion } from "@/lib/authService";
@@ -25,6 +26,12 @@ const CENTRO_CIUDAD: UbicacionPunto = { lat: 8.34739, lng: -62.65371 };
 
 export default function Home() {
   const [modalAbierto, setModalAbierto] = useState(false);
+
+  useEffect(() => {
+    if (!estaSupabaseConfigurado()) return;
+    const cleanup = suscribirseRealtimeContenedores();
+    return cleanup;
+  }, []);
 
   const sesion = useSyncExternalStore(
     () => () => {},
@@ -219,7 +226,7 @@ export default function Home() {
       {puede(sesion.rol, "ver_dashboard") && <DashboardGerencial />}
 
       <section className="flex flex-1 justify-center">
-        <RoutesMapView contenedores={contenedoresVisibles} centro={CENTRO_CIUDAD} />
+        <RoutesMapView contenedores={contenedoresVisibles} centro={CENTRO_CIUDAD} rol={sesion.rol} />
       </section>
 
       {modalAbierto && (

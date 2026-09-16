@@ -669,3 +669,53 @@ export function obtenerSnapshotEstadoContenedores(): EstadoContenedores {
 export function obtenerSnapshotServidorEstadoContenedores(): EstadoContenedores {
   return ESTADO_SERVIDOR;
 }
+
+let realtimeCleanup: (() => void) | null = null;
+
+export function suscribirseRealtimeContenedores(): () => void {
+  if (typeof window === "undefined") return () => {};
+  if (realtimeCleanup) return realtimeCleanup;
+  if (!estaSupabaseConfigurado()) return () => {};
+
+  const supabase = getSupabaseClient();
+  const canal = supabase
+    .channel("contenedores-realtime")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "Contenedores" },
+      (payload) => {
+        if (!cache) return;
+
+        if (payload.eventType === "INSERT") {
+          const nuevo = mapearContenedor(payload.new as Contenedor);
+          if (nuevo) {
+            const existe = cache.some((c) => c.id === nuevo.id);
+            if (!existe) cache = [...cache, nuevo];
+          }
+        } else if (payload.eventType === "UPDATE") {
+          const actualizado = mapearContenedor(payload.new as Contenedor);
+          if (actualizado) {
+            cache = cache.map((c) =>
+              c.id === actualizado.id ? actualizado : c
+            );
+          }
+        } else if (payload.eventType === "DELETE") {
+          const idEliminado = (payload.old as { id?: string })?.id;
+          if (idEliminado) {
+            cache = cache.filter((c) => c.id !== idEliminado);
+          }
+        }
+
+        escribirLocal(cache ?? []);
+        notificar();
+      }
+    )
+    .subscribe();
+
+  realtimeCleanup = () => {
+    supabase.removeChannel(canal);
+    realtimeCleanup = null;
+  };
+
+  return realtimeCleanup;
+}

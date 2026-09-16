@@ -11,7 +11,7 @@ import ConfirmarEliminarContenedorModal from "@/components/ConfirmarEliminarCont
 import EditarContenedorModal from "@/components/EditarContenedorModal";
 import PopupContenedor from "@/components/PopupContenedor";
 import { vaciarContenedor } from "@/lib/contenedoresStore";
-import type { Contenedor, UbicacionPunto } from "@/types/schema";
+import type { Contenedor, RolUsuario, UbicacionPunto } from "@/types/schema";
 
 import "leaflet/dist/leaflet.css";
 
@@ -48,6 +48,7 @@ interface MapaProps {
   ajustarVistaARuta?: boolean;
   paradasRuta?: UbicacionPunto[];
   indiceParadaActual?: number;
+  rol?: RolUsuario | null;
 }
 
 function colorPorNivel(nivel: number): string {
@@ -114,6 +115,7 @@ function MapaContenedores({
   ajustarVistaARuta = true,
   paradasRuta = undefined,
   indiceParadaActual = undefined,
+  rol = null,
 }: MapaProps) {
   const contenedorRef = useRef<HTMLDivElement>(null);
   const mapaRef = useRef<LeafletMap | null>(null);
@@ -122,6 +124,7 @@ function MapaContenedores({
   const centroInicialRef = useRef(centro);
   const zoomInicialRef = useRef(zoom);
   const onSelectRef = useRef(onSelectContenedor);
+  const rolRef = useRef(rol);
   const ajusteInicialRef = useRef(false);
   const marcadoresRef = useRef<Map<string, LeafletMarker>>(new Map());
   const datosRef = useRef<Map<string, Contenedor>>(new Map());
@@ -139,6 +142,10 @@ function MapaContenedores({
     onSelectRef.current = onSelectContenedor;
   }, [onSelectContenedor]);
 
+  useEffect(() => {
+    rolRef.current = rol;
+  }, [rol]);
+
   function renderPopupContenido(id: string): void {
     const contenedor = datosRef.current.get(id);
     const raiz = raicesPopupRef.current.get(id);
@@ -150,6 +157,7 @@ function MapaContenedores({
         onVaciar={() => vaciarContenedor(contenedor.id)}
         onEditar={() => setContenedorAEditar(contenedor)}
         onEliminar={() => setContenedorAEliminar(contenedor)}
+        rol={rolRef.current}
       />
     );
   }
@@ -319,7 +327,7 @@ return () => {
     return () => {
       activo = false;
     };
-  }, [contenedores, mapaListo]);
+  }, [contenedores, mapaListo, rol]);
 
   useEffect(() => {
     if (!mapaListo || !capaRutaRef.current || !mapaRef.current) return;

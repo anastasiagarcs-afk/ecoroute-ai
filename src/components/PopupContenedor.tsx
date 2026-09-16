@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import type { Contenedor, EstadoContenedor } from "@/types/schema";
+import { puede } from "@/lib/rolesAutorizados";
+import type { Contenedor, EstadoContenedor, RolUsuario } from "@/types/schema";
 
 interface PopupContenedorProps {
   contenedor: Contenedor;
   onVaciar: () => void;
   onEditar: () => void;
   onEliminar: () => void;
+  rol?: RolUsuario | null;
 }
 
 const ETIQUETAS_ESTADO: Record<EstadoContenedor, string> = {
@@ -120,11 +122,17 @@ export default function PopupContenedor({
   onVaciar,
   onEditar,
   onEliminar,
+  rol = null,
 }: PopupContenedorProps) {
   const [vaciando, setVaciando] = useState(false);
   const nivel = Math.round(contenedor.nivel_llenado);
   const etiquetaEstado = ETIQUETAS_ESTADO[contenedor.estado];
   const colorEstado = COLORES_ESTADO[contenedor.estado];
+
+  const mostrarAcciones = rol !== null && rol !== "Ciudadano";
+  const mostrarVaciar = mostrarAcciones && puede(rol, "vaciar_contenedor");
+  const mostrarEditar = mostrarAcciones && puede(rol, "editar_contenedor");
+  const mostrarEliminar = mostrarAcciones && puede(rol, "eliminar_contenedor");
 
   const manejarVaciar = () => {
     if (vaciando) return;
@@ -169,54 +177,62 @@ export default function PopupContenedor({
         </span>
       </div>
 
-      <div
-        className="mt-3 flex items-center gap-2 border-t border-gray-200 pt-2 dark:border-gray-700"
-        onClick={(evento) => evento.stopPropagation()}
-        onMouseDown={(evento) => evento.stopPropagation()}
-      >
-        <button
-          type="button"
-          disabled={vaciando}
-          title="Vaciar contenedor (marca 0% y Vacío/Disponible)"
-          onClick={(evento) => {
-            evento.stopPropagation();
-            manejarVaciar();
-          }}
-          className={claseBoton(
-            "bg-emerald-600 hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+      {(mostrarVaciar || mostrarEditar || mostrarEliminar) && (
+        <div
+          className="mt-3 flex items-center gap-2 border-t border-gray-200 pt-2 dark:border-gray-700"
+          onClick={(evento) => evento.stopPropagation()}
+          onMouseDown={(evento) => evento.stopPropagation()}
+        >
+          {mostrarVaciar && (
+            <button
+              type="button"
+              disabled={vaciando}
+              title="Vaciar contenedor (marca 0% y Vacío/Disponible)"
+              onClick={(evento) => {
+                evento.stopPropagation();
+                manejarVaciar();
+              }}
+              className={claseBoton(
+                "bg-emerald-600 hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+              )}
+            >
+              <IconoVaciar />
+              {vaciando ? "Vaciando…" : "Vaciar"}
+            </button>
           )}
-        >
-          <IconoVaciar />
-          {vaciando ? "Vaciando…" : "Vaciar"}
-        </button>
-        <button
-          type="button"
-          title="Editar contenedor"
-          onClick={(evento) => {
-            evento.stopPropagation();
-            onEditar();
-          }}
-          className={claseBoton(
-            "bg-zinc-900 hover:bg-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600"
+          {mostrarEditar && (
+            <button
+              type="button"
+              title="Editar contenedor"
+              onClick={(evento) => {
+                evento.stopPropagation();
+                onEditar();
+              }}
+              className={claseBoton(
+                "bg-zinc-900 hover:bg-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600"
+              )}
+            >
+              <IconoEditar />
+              Editar
+            </button>
           )}
-        >
-          <IconoEditar />
-          Editar
-        </button>
-        <button
-          type="button"
-          aria-label="Eliminar contenedor"
-          title="Eliminar contenedor del mapa y de Supabase"
-          onClick={(evento) => {
-            evento.stopPropagation();
-            onEliminar();
-          }}
-          className={claseBoton("bg-red-600 hover:bg-red-700")}
-        >
-          <IconoPapelera />
-          Eliminar
-        </button>
-      </div>
+          {mostrarEliminar && (
+            <button
+              type="button"
+              aria-label="Eliminar contenedor"
+              title="Eliminar contenedor del mapa y de Supabase"
+              onClick={(evento) => {
+                evento.stopPropagation();
+                onEliminar();
+              }}
+              className={claseBoton("bg-red-600 hover:bg-red-700")}
+            >
+              <IconoPapelera />
+              Eliminar
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

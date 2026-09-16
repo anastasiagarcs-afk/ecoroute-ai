@@ -4,6 +4,9 @@ export type AccionSistema =
   | "ver_dashboard"
   | "ver_mapa"
   | "gestionar_contenedores"
+  | "vaciar_contenedor"
+  | "editar_contenedor"
+  | "eliminar_contenedor"
   | "optimizar_rutas"
   | "exportar_reportes"
   | "usar_ia_predictiva"
@@ -18,6 +21,9 @@ const PERMISOS: Record<RolUsuario, AccionSistema[]> = {
     "ver_dashboard",
     "ver_mapa",
     "gestionar_contenedores",
+    "vaciar_contenedor",
+    "editar_contenedor",
+    "eliminar_contenedor",
     "optimizar_rutas",
     "exportar_reportes",
     "usar_ia_predictiva",
@@ -30,6 +36,8 @@ const PERMISOS: Record<RolUsuario, AccionSistema[]> = {
   Gerente: [
     "ver_dashboard",
     "ver_mapa",
+    "vaciar_contenedor",
+    "editar_contenedor",
     "exportar_reportes",
     "usar_ia_predictiva",
     "ver_historial",
@@ -38,6 +46,7 @@ const PERMISOS: Record<RolUsuario, AccionSistema[]> = {
   Operador: [
     "ver_mapa",
     "gestionar_contenedores",
+    "vaciar_contenedor",
     "optimizar_rutas",
     "ver_historial",
     "separacion_residuos",

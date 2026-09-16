@@ -7,18 +7,20 @@ import { obtenerSnapshotSesion } from "@/lib/authService";
 import { puede, ETIQUETAS_ROL } from "@/lib/rolesAutorizados";
 import type { RegistroHistorialRuta } from "@/lib/historialRutas";
 import type { RutaOptimizada } from "@/lib/routeOptimizer";
-import type { Contenedor, UbicacionPunto } from "@/types/schema";
+import type { Contenedor, RolUsuario, UbicacionPunto } from "@/types/schema";
 
 interface RoutesMapViewProps {
   contenedores: Contenedor[];
   centro: UbicacionPunto;
   zoom?: number;
+  rol?: RolUsuario | null;
 }
 
 export default function RoutesMapView({
   contenedores,
   centro,
   zoom = 13,
+  rol = null,
 }: RoutesMapViewProps) {
   const sesion = useSyncExternalStore(
     () => () => {},
@@ -60,6 +62,7 @@ export default function RoutesMapView({
           rutaPuntos={rutaPuntos}
           paradasRuta={rutaPuntos}
           indiceParadaActual={indiceParadaActual}
+          rol={rol}
         />
 
         {rutaPuntos.length > 0 && (
