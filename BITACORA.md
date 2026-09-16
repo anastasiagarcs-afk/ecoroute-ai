@@ -1,5 +1,5 @@
 # Bitácora del Proyecto — EcoRoute AI
-> Documento generado automáticamente el 15 de septiembre de 2026 a las 04:20 a. m. por `npm run informe`. No editar a mano: se regenera desde el código para mantenerse al día.
+> Documento generado automáticamente el 15 de septiembre de 2026 a las 10:25 p. m. por `npm run informe`. No editar a mano: se regenera desde el código para mantenerse al día.
 > **Nota**: Este archivo es el registro cronológico automático. Para el informe académico formal, ver `INFORME_PROYECTO.md`.
 
 ## 1. Arquitectura y Stack Tecnológico
@@ -52,7 +52,7 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 
 | Módulo | Líneas | Descripción |
 | --- | --- | --- |
-| `src/lib/adminService.ts` | 41 | — |
+| `src/lib/adminService.ts` | 73 | — |
 | `src/lib/authService.ts` | 233 | — |
 | `src/lib/contenedoresStore.ts` | 671 | Almacén de contenedores: carga y semilla desde Supabase, normalización de ubicación (objeto, GeoJSON, EWKT o WKB/EWKB hexadecimal con parseFloat), datos de respaldo en localStorage y registro, vaciado (0% y estado vacio), edición y eliminación en tiempo real. |
 | `src/lib/gamificacion.ts` | 190 | Lógica pura de gamificación: puntos por kg según material, niveles de ciudadano, progreso y catálogo de recompensas. |
@@ -83,8 +83,10 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 - `supabase/migrations/10_seed_admin_acceso.sql`
 - `supabase/migrations/11_aprobar_solicitud_rol_asignado.sql`
 - `supabase/migrations/12_reforzar_rls_solicitudes_acceso.sql`
+- `supabase/migrations/13_actualizar_rpc_rechazo.sql`
+- `supabase/migrations/14_restaurar_rls_admin_solicitudes.sql`
 
-Total de políticas RLS habilitadas en migraciones: 20.
+Total de políticas RLS habilitadas en migraciones: 21.
 
 ### Tablas
 

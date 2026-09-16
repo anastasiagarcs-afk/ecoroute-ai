@@ -41,6 +41,21 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Verificar rol Admin para /admin
+  if (user && pathname.startsWith("/admin")) {
+    const { data: usuario } = await supabase
+      .from("Usuarios")
+      .select("rol")
+      .eq("id", user.id)
+      .single();
+
+    if (!usuario || usuario.rol !== "Admin") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/";
+      return NextResponse.redirect(url);
+    }
+  }
+
   // Redirigir a / si ya tiene sesión y está en /acceso
   if (user && pathname === RUTA_ACCESO) {
     const url = request.nextUrl.clone();

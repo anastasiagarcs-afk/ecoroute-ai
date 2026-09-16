@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   listarSolicitudesPendientes,
   aprobarSolicitud,
+  rechazarSolicitud,
 } from "@/lib/adminService";
 import { mostrarToast } from "@/lib/toastStore";
 import { obtenerSnapshotSesion, cerrarSesion } from "@/lib/authService";
@@ -33,6 +34,7 @@ export default function AdminPage() {
     let activo = true;
     (async () => {
       const resultado = await listarSolicitudesPendientes();
+      console.log("[Admin] Resultado carga solicitudes:", resultado);
       if (activo && resultado.exito && resultado.datos) {
         setSolicitudes(resultado.datos);
         setCargando(false);
@@ -55,6 +57,21 @@ export default function AdminPage() {
       setSolicitudes((prev) => prev.filter((s) => s.id !== solicitudId));
     } else {
       mostrarToast("Error", resultado.error ?? "No se pudo procesar.", "error");
+    }
+    setProcesando(null);
+  }
+
+  async function manejarRechazar(solicitudId: string) {
+    const motivo = prompt("Motivo del rechazo (opcional):");
+    if (motivo === null) return;
+
+    setProcesando(solicitudId);
+    const resultado = await rechazarSolicitud(solicitudId, motivo || undefined);
+    if (resultado.exito) {
+      mostrarToast("Solicitud rechazada", "La solicitud fue denegada.", "exito");
+      setSolicitudes((prev) => prev.filter((s) => s.id !== solicitudId));
+    } else {
+      mostrarToast("Error", resultado.error ?? "No se pudo rechazar.", "error");
     }
     setProcesando(null);
   }
@@ -219,7 +236,7 @@ export default function AdminPage() {
                     <button
                       type="button"
                       disabled={procesando === solicitud.id}
-                      onClick={() => manejarDecision(solicitud.id, false)}
+                      onClick={() => manejarRechazar(solicitud.id)}
                       className="rounded-lg bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700 ring-1 ring-inset ring-red-600/20 transition-colors hover:bg-red-100 disabled:opacity-50 dark:bg-red-500/10 dark:text-red-400 dark:ring-red-400/20 dark:hover:bg-red-500/20"
                     >
                       {procesando === solicitud.id ? "..." : "Rechazar"}

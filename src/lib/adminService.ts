@@ -14,14 +14,32 @@ export async function listarSolicitudesPendientes(): Promise<
   { exito: boolean; datos?: SolicitudConUsuario[]; error?: string }
 > {
   const supabase = crearCliente();
-  const { data, error } = await supabase
+
+  // 1. Obtener solicitudes pendientes (sin JOIN para evitar problemas de RLS)
+  const { data: solicitudes, error } = await supabase
     .from("SolicitudesAcceso")
-    .select("*, Usuarios(*)")
+    .select("*")
     .eq("estado", "pendiente")
     .order("fecha_solicitud", { ascending: true });
 
   if (error) return { exito: false, error: error.message };
-  return { exito: true, datos: (data ?? []) as unknown as SolicitudConUsuario[] };
+  if (!solicitudes?.length) return { exito: true, datos: [] };
+
+  // 2. Obtener datos de usuarios por separado
+  const usuarioIds = [...new Set(solicitudes.map((s) => s.usuario_id))];
+  const { data: usuarios } = await supabase
+    .from("Usuarios")
+    .select("*")
+    .in("id", usuarioIds);
+
+  // 3. Mapear datos
+  const mapaUsuarios = new Map((usuarios ?? []).map((u) => [u.id, u]));
+  const resultado: SolicitudConUsuario[] = solicitudes.map((s) => ({
+    ...s,
+    Usuarios: mapaUsuarios.get(s.usuario_id) ?? null,
+  })) as SolicitudConUsuario[];
+
+  return { exito: true, datos: resultado };
 }
 
 export async function aprobarSolicitud(
@@ -34,6 +52,20 @@ export async function aprobarSolicitud(
     p_solicitud_id: solicitudId,
     p_aprobar: aprobar,
     p_rol_asignado: rolAsignado ?? null,
+  });
+  if (error) return { exito: false, error: error.message };
+  return { exito: true };
+}
+
+export async function rechazarSolicitud(
+  solicitudId: string,
+  motivo?: string
+): Promise<{ exito: boolean; error?: string }> {
+  const supabase = crearCliente();
+  const { error } = await supabase.rpc("aprobar_solicitud_acceso", {
+    p_solicitud_id: solicitudId,
+    p_aprobar: false,
+    p_motivo_rechazo: motivo ?? null,
   });
   if (error) return { exito: false, error: error.message };
   return { exito: true };
