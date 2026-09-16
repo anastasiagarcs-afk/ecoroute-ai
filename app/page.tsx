@@ -1,20 +1,12 @@
 "use client";
 
-import { useEffect, useSyncExternalStore, useState } from "react";
+import { useSyncExternalStore, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import DashboardGerencial from "@/components/DashboardGerencial";
 import NuevoContenedorModal from "@/components/NuevoContenedorModal";
 import RoutesMapView from "@/components/RoutesMapView";
-import {
-  CONTENEDORES_FALLBACK,
-  obtenerSnapshotContenedores,
-  obtenerSnapshotEstadoContenedores,
-  obtenerSnapshotServidorContenedores,
-  obtenerSnapshotServidorEstadoContenedores,
-  suscribirseAContenedores,
-  suscribirseRealtimeContenedores,
-} from "@/lib/contenedoresStore";
+import { useContenedores } from "@/hooks/useContenedores";
 import { estaSupabaseConfigurado } from "@/lib/supabaseClient";
 import { obtenerSnapshotSesion } from "@/lib/authService";
 import { puede } from "@/lib/rolesAutorizados";
@@ -27,27 +19,12 @@ const CENTRO_CIUDAD: UbicacionPunto = { lat: 8.34739, lng: -62.65371 };
 export default function Home() {
   const [modalAbierto, setModalAbierto] = useState(false);
 
-  useEffect(() => {
-    if (!estaSupabaseConfigurado()) return;
-    const cleanup = suscribirseRealtimeContenedores();
-    return cleanup;
-  }, []);
+  const { contenedores, estado: estadoContenedores } = useContenedores();
 
   const sesion = useSyncExternalStore(
     () => () => {},
     obtenerSnapshotSesion,
     () => null
-  );
-
-  const contenedores = useSyncExternalStore(
-    suscribirseAContenedores,
-    obtenerSnapshotContenedores,
-    obtenerSnapshotServidorContenedores
-  );
-  const estadoContenedores = useSyncExternalStore(
-    suscribirseAContenedores,
-    obtenerSnapshotEstadoContenedores,
-    obtenerSnapshotServidorEstadoContenedores
   );
 
   const contenedoresVisibles =
@@ -142,7 +119,7 @@ export default function Home() {
           <section className="mx-auto w-full max-w-5xl overflow-hidden rounded-2xl border border-zinc-200 shadow-sm dark:border-zinc-800">
             <div className="h-[40vh] w-full sm:h-[50vh]">
               <MapPreview
-                contenedores={CONTENEDORES_FALLBACK}
+                contenedores={contenedores}
                 centro={CENTRO_CIUDAD}
                 zoom={12}
                 altura="100%"

@@ -1,11 +1,7 @@
 "use client";
 
-import { useSyncExternalStore, useState, type FormEvent } from "react";
-import {
-  obtenerSnapshotContenedores,
-  obtenerSnapshotServidorContenedores,
-  suscribirseAContenedores,
-} from "@/lib/contenedoresStore";
+import { useState, type FormEvent } from "react";
+import { useContenedores } from "@/hooks/useContenedores";
 import {
   MATERIALES_GAMIFICACION,
   calcularPuntosGamificacion,
@@ -53,11 +49,7 @@ export default function RegistroReciclajeForm({
     null
   );
 
-  const contenedores = useSyncExternalStore(
-    suscribirseAContenedores,
-    obtenerSnapshotContenedores,
-    obtenerSnapshotServidorContenedores
-  );
+  const { contenedores } = useContenedores();
 
   const kg = Number(peso);
   const pesoValido = Number.isFinite(kg) && kg > 0;

@@ -1,10 +1,8 @@
 "use client";
 
 import { useMemo, useState, useSyncExternalStore } from "react";
+import { useContenedores } from "@/hooks/useContenedores";
 import {
-  obtenerSnapshotContenedores,
-  obtenerSnapshotServidorContenedores,
-  suscribirseAContenedores,
   vaciarContenedor,
 } from "@/lib/contenedoresStore";
 import {
@@ -79,11 +77,8 @@ export default function DashboardGerencial() {
     () => null
   );
 
-  const contenedores = useSyncExternalStore(
-    suscribirseAContenedores,
-    obtenerSnapshotContenedores,
-    obtenerSnapshotServidorContenedores
-  );
+  const { contenedores } = useContenedores();
+
   const historial = useSyncExternalStore(
     suscribirseAlHistorial,
     obtenerSnapshotHistorial,
