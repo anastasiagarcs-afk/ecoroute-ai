@@ -1,5 +1,5 @@
 # Bitácora del Proyecto — EcoRoute AI
-> Documento generado automáticamente el 15 de septiembre de 2026 a las 10:25 p. m. por `npm run informe`. No editar a mano: se regenera desde el código para mantenerse al día.
+> Documento generado automáticamente el 15 de septiembre de 2026 a las 11:09 p. m. por `npm run informe`. No editar a mano: se regenera desde el código para mantenerse al día.
 > **Nota**: Este archivo es el registro cronológico automático. Para el informe académico formal, ver `INFORME_PROYECTO.md`.
 
 ## 1. Arquitectura y Stack Tecnológico
@@ -32,6 +32,7 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 | `src/components/EditarContenedorModal.tsx` | EditarContenedorModal | 226 | Modal para editar un contenedor existente: ajusta el porcentaje de llenado, el tipo de residuo y el estado (activo, vacío, mantenimiento, etc.), actualiza Supabase y refresca el marcador en el mapa. |
 | `src/components/GamificacionPanel.tsx` | GamificacionPanel | 179 | Panel de gamificación: puntos acumulados, nivel del ciudadano, barra de progreso y catálogo de recompensas. |
 | `src/components/Map.tsx` | MapaContenedores | 426 | Mapa Leaflet interactivo: contenedores en tiempo real y polilínea de la ruta activa. |
+| `src/components/NavRol.tsx` | NavRol | 96 | — |
 | `src/components/NuevoContenedorModal.tsx` | NuevoContenedorModal | 365 | Modal para registrar nuevos contenedores (código, tipo de residuo, nivel, capacidad y coordenadas); inserta vía la función Supabase registrar_contenedor y el marcador aparece al instante en el mapa. |
 | `src/components/PopupContenedor.tsx` | PopupContenedor | 222 | Contenido en React del popup de cada marcador: información y estado del contenedor e icono con acciones Vaciar (0% y estado Vacío/Disponible), Editar y Eliminar. |
 | `src/components/RegistroReciclajeForm.tsx` | RegistroReciclajeForm | 252 | Formulario ciudadano para registrar entregas (material + peso en kg) con cálculo automático de puntos e inserción en Supabase. |
@@ -85,8 +86,10 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 - `supabase/migrations/12_reforzar_rls_solicitudes_acceso.sql`
 - `supabase/migrations/13_actualizar_rpc_rechazo.sql`
 - `supabase/migrations/14_restaurar_rls_admin_solicitudes.sql`
+- `supabase/migrations/15_rls_por_rol.sql`
+- `supabase/migrations/16_drop_aprobar_solicitud_overloads.sql`
 
-Total de políticas RLS habilitadas en migraciones: 21.
+Total de políticas RLS habilitadas en migraciones: 40.
 
 ### Tablas
 

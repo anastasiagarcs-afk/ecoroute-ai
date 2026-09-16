@@ -15,9 +15,8 @@ import {
   suscribirseAContenedores,
 } from "@/lib/contenedoresStore";
 import { estaSupabaseConfigurado } from "@/lib/supabaseClient";
-import { obtenerSnapshotSesion, cerrarSesion } from "@/lib/authService";
-import { puede, ETIQUETAS_ROL } from "@/lib/rolesAutorizados";
-import { useRouter } from "next/navigation";
+import { obtenerSnapshotSesion } from "@/lib/authService";
+import { puede } from "@/lib/rolesAutorizados";
 import type { UbicacionPunto } from "@/types/schema";
 
 const MapPreview = dynamic(() => import("@/components/Map"), { ssr: false });
@@ -25,7 +24,6 @@ const MapPreview = dynamic(() => import("@/components/Map"), { ssr: false });
 const CENTRO_CIUDAD: UbicacionPunto = { lat: 8.34739, lng: -62.65371 };
 
 export default function Home() {
-  const router = useRouter();
   const [modalAbierto, setModalAbierto] = useState(false);
 
   const sesion = useSyncExternalStore(
@@ -164,66 +162,61 @@ export default function Home() {
   }
 
   return (
-    <main className="flex flex-1 flex-col gap-6 p-4 sm:p-6 lg:p-10">
-      <header className="flex flex-col gap-3">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-              EcoRoute AI
-            </h1>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Monitoreo de contenedores de residuos solidos — Ciudad Guayana
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {puede(sesion.rol, "aprobar_solicitudes") && (
-              <Link
-                href="/admin"
-                className="inline-flex w-fit items-center gap-1.5 rounded-full bg-violet-900 px-3 py-1 text-xs font-medium text-violet-50 transition-colors hover:bg-violet-700 dark:bg-violet-500/10 dark:text-violet-400 dark:hover:bg-violet-500/20"
-              >
-                Gestion de Acceso
-              </Link>
-            )}
-            {datosRespaldo && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-400/20">
-                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                Datos de respaldo
-              </span>
-            )}
-            <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-400/20">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              {ETIQUETAS_ROL[sesion.rol]}
+    <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6 lg:p-10">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+            {sesion.rol === "Ciudadano"
+              ? "Mi EcoRoute"
+              : sesion.rol === "Operador"
+                ? "Mapa y Rutas"
+                : sesion.rol === "Gerente"
+                  ? "Dashboard Gerencial"
+                  : "EcoRoute AI"}
+          </h1>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            {sesion.rol === "Ciudadano"
+              ? "Registra tus reciclajes y acumula eco-puntos"
+              : sesion.rol === "Operador"
+                ? "Visualiza contenedores y optimiza rutas de recoleccion"
+                : sesion.rol === "Gerente"
+                  ? "Metricas globales, reportes y eficiencia de rutas"
+                  : "Monitoreo de contenedores de residuos solidos — Ciudad Guayana"}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {datosRespaldo && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-400/20">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+              Datos de respaldo
             </span>
-            <Link
-              href="/separacion"
-              className="inline-flex w-fit items-center gap-1.5 rounded-full bg-zinc-900 px-3 py-1 text-xs font-medium text-zinc-50 transition-colors hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
-            >
-              Separacion y gamificacion
-            </Link>
-            {puede(sesion.rol, "gestionar_contenedores") && (
-              <button
-                type="button"
-                onClick={() => setModalAbierto(true)}
-                className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-700"
-              >
-                + Registrar Contenedor
-              </button>
-            )}
+          )}
+          {puede(sesion.rol, "gestionar_contenedores") && (
             <button
               type="button"
-              onClick={async () => {
-                await cerrarSesion();
-                router.refresh();
-              }}
-              className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20 transition-colors hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:ring-red-400/20 dark:hover:bg-red-500/20"
+              onClick={() => setModalAbierto(true)}
+              className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-700"
             >
-              Cerrar sesion
+              + Registrar Contenedor
             </button>
-          </div>
+          )}
         </div>
       </header>
 
-      <DashboardGerencial />
+      {sesion.rol === "Ciudadano" && (
+        <section className="rounded-xl border border-dashed border-zinc-300 bg-zinc-50 p-8 text-center dark:border-zinc-700 dark:bg-zinc-900">
+          <span className="text-3xl">♻</span>
+          <p className="mt-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            Bienvenido, {sesion.usuario.nombre}
+          </p>
+          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+            Tienes {sesion.usuario.puntos_reciclaje} eco-puntos acumulados.
+            Usa la navegacion para acceder a Separacion y Gamificacion.
+          </p>
+        </section>
+      )}
+
+      {puede(sesion.rol, "ver_dashboard") && <DashboardGerencial />}
 
       <section className="flex flex-1 justify-center">
         <RoutesMapView contenedores={contenedoresVisibles} centro={CENTRO_CIUDAD} />
@@ -232,6 +225,6 @@ export default function Home() {
       {modalAbierto && (
         <NuevoContenedorModal onCerrar={() => setModalAbierto(false)} />
       )}
-    </main>
+    </div>
   );
 }

@@ -273,6 +273,7 @@ export interface Database {
           p_solicitud_id: string;
           p_aprobar: boolean;
           p_rol_asignado?: RolUsuario | null;
+          p_motivo_rechazo?: string | null;
         };
         Returns: Json;
       };

@@ -5,7 +5,10 @@
 -- 1. Eliminar la política restrictiva que solo permitía ver las propias
 drop policy if exists "SolicitudesAcceso select authenticated" on public."SolicitudesAcceso";
 
--- 2. Restaurar política Admin para ver TODAS las solicitudes
+-- 2. Eliminar política Admin previa (migración 09) para evitar error 42710 (nombre duplicado)
+drop policy if exists "SolicitudesAcceso select admin" on public."SolicitudesAcceso";
+
+-- 3. Restaurar política Admin para ver TODAS las solicitudes
 -- NOTA: Usa tabla "Usuarios" (no "perfiles") con rol = 'Admin'
 create policy "SolicitudesAcceso select admin"
   on public."SolicitudesAcceso"
