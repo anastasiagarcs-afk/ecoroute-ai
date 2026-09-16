@@ -1,14 +1,17 @@
--- Migración 12: Reforzar RLS en SolicitudesAcceso para permitir INSERT a usuarios autenticados
--- Garantiza que el flujo de registro (auth.uid() = Usuarios.id) funcione sin errores de RLS
+-- Migración 12: Reforzar RLS en SolicitudesAcceso (Idempotente)
 
--- Policy explícita para rol 'authenticated' (más permisiva que la existente)
+-- 1. Eliminar políticas previas si existen para evitar el error 42710
+drop policy if exists "SolicitudesAcceso insert authenticated" on public."SolicitudesAcceso";
+drop policy if exists "SolicitudesAcceso select authenticated" on public."SolicitudesAcceso";
+
+-- 2. Crear policy explícita para INSERT (usuario crea su propia solicitud)
 create policy "SolicitudesAcceso insert authenticated"
   on public."SolicitudesAcceso"
   for insert
   to authenticated
   with check (usuario_id = auth.uid());
 
--- También asegurar policy de SELECT para authenticated (dueño ve las suyas)
+-- 3. Crear policy explícita para SELECT (usuario lee sus propias solicitudes)
 create policy "SolicitudesAcceso select authenticated"
   on public."SolicitudesAcceso"
   for select
