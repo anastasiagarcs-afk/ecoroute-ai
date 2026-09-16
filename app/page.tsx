@@ -1,8 +1,9 @@
 "use client";
 
-import { useSyncExternalStore, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import { useSyncExternalStore } from "react";
 import DashboardGerencial from "@/components/DashboardGerencial";
 import NuevoContenedorModal from "@/components/NuevoContenedorModal";
 import RoutesMapView from "@/components/RoutesMapView";
@@ -10,7 +11,8 @@ import { useContenedores } from "@/hooks/useContenedores";
 import { estaSupabaseConfigurado } from "@/lib/supabaseClient";
 import { obtenerSnapshotSesion } from "@/lib/authService";
 import { puede } from "@/lib/rolesAutorizados";
-import type { UbicacionPunto } from "@/types/schema";
+import { obtenerRutaActivaOperador } from "@/lib/operadoresService";
+import type { Ruta, UbicacionPunto } from "@/types/schema";
 
 const MapPreview = dynamic(() => import("@/components/Map"), { ssr: false });
 
@@ -18,6 +20,7 @@ const CENTRO_CIUDAD: UbicacionPunto = { lat: 8.34739, lng: -62.65371 };
 
 export default function Home() {
   const [modalAbierto, setModalAbierto] = useState(false);
+  const [rutaActiva, setRutaActiva] = useState<Ruta | null>(null);
 
   const { contenedores, estado: estadoContenedores } = useContenedores();
 
@@ -26,6 +29,13 @@ export default function Home() {
     obtenerSnapshotSesion,
     () => null
   );
+
+  // Cargar ruta activa para operadores
+  useEffect(() => {
+    if (sesion?.rol === "Operador" && sesion.usuario?.id) {
+      obtenerRutaActivaOperador(sesion.usuario.id).then(setRutaActiva);
+    }
+  }, [sesion]);
 
   const contenedoresVisibles =
     estadoContenedores.estadoCarga === "cargando" ? [] : contenedores;
@@ -197,6 +207,28 @@ export default function Home() {
             Tienes {sesion.usuario.puntos_reciclaje} eco-puntos acumulados.
             Usa la navegacion para acceder a Separacion y Gamificacion.
           </p>
+        </section>
+      )}
+
+      {sesion.rol === "Operador" && rutaActiva && (
+        <section className="rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/50 dark:bg-blue-950/30">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                Ruta Asignada: {rutaActiva.nombre}
+              </h3>
+              <p className="mt-1 text-xs text-blue-700 dark:text-blue-300">
+                {rutaActiva.contenedores_asignados?.length ?? 0} contenedor(es) ·{" "}
+                {rutaActiva.distancia_total
+                  ? `${rutaActiva.distancia_total} km`
+                  : "Distancia no calculada"}{" "}
+                · {rutaActiva.tiempo_estimado ?? "Tiempo no estimado"}
+              </p>
+            </div>
+            <span className="shrink-0 rounded-full bg-blue-600 px-2.5 py-0.5 text-[10px] font-semibold text-white">
+              Pendiente
+            </span>
+          </div>
         </section>
       )}
 

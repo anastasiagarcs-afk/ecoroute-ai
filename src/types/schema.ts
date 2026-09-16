@@ -93,6 +93,7 @@ export type Ruta = {
   ultima_ejecucion: string | null;
   distancia_total: number | null;
   tiempo_estimado: string | null;
+  operador_asignado: string | null;
   created_at: string;
 }
 

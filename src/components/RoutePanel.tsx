@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import ConfirmarEliminarContenedorModal from "@/components/ConfirmarEliminarContenedorModal";
 import EditarContenedorModal from "@/components/EditarContenedorModal";
 import {
@@ -18,12 +18,18 @@ import {
   suscribirseAlHistorial,
   vaciarHistorial,
 } from "@/lib/historialRutas";
+import {
+  listarOperadores,
+  crearRutaConAsignacion,
+  notificarAsignacionRuta,
+} from "@/lib/operadoresService";
 import { vaciarContenedor } from "@/lib/contenedoresStore";
 import type { RegistroHistorialRuta } from "@/lib/historialRutas";
 import type {
   Contenedor,
   EstadoContenedor,
   UbicacionPunto,
+  Usuario,
 } from "@/types/schema";
 
 const ETIQUETAS_ESTADO: Record<EstadoContenedor, string> = {
@@ -95,6 +101,15 @@ export default function RoutePanel({
   const [guardando, setGuardando] = useState(false);
   const [errorAccion, setErrorAccion] = useState<string | null>(null);
 
+  const [operadores, setOperadores] = useState<Usuario[]>([]);
+  const [operadorSeleccionado, setOperadorSeleccionado] = useState<string>("");
+  const [rutaIdGuardada, setRutaIdGuardada] = useState<string | null>(null);
+  const [mensajeConfirmacion, setMensajeConfirmacion] = useState<string>("");
+
+  useEffect(() => {
+    listarOperadores().then(setOperadores);
+  }, []);
+
   const historial = useSyncExternalStore(
     suscribirseAlHistorial,
     obtenerSnapshotHistorial,
@@ -145,6 +160,7 @@ export default function RoutePanel({
   const limpiarRuta = () => {
     setRuta(null);
     setGuardadoOk(false);
+    setMensajeConfirmacion("");
     onRutaGenerada?.(null);
   };
 
@@ -157,7 +173,9 @@ export default function RoutePanel({
     setGuardando(true);
     setGuardadoOk(false);
     setErrorAccion(null);
+    setMensajeConfirmacion("");
     try {
+      // 1. Guardar en historial
       await registrarRutaEjecutada({
         distanciaKm: ruta.distanciaTotalKm,
         tiempoMin: ruta.tiempoEstimadoMin,
@@ -165,6 +183,37 @@ export default function RoutePanel({
         fuenteRuta: ruta.fuenteRuta,
         geometria: ruta.geometria,
       });
+
+      // 2. Crear registro en tabla Rutas
+      const nombreRuta = `Ruta-${new Date().getTime()}`;
+      const rutaCreada = await crearRutaConAsignacion({
+        nombre: nombreRuta,
+        zona: null,
+        contenedores_asignados: ruta.puntos.map((p) => p.contenedor.id),
+        fecha_creacion: new Date().toISOString(),
+        ultima_ejecucion: null,
+        distancia_total: Math.round(ruta.distanciaTotalKm * 100) / 100,
+        tiempo_estimado: `${Math.round(ruta.tiempoEstimadoMin)} min`,
+        operador_asignado: operadorSeleccionado || null,
+      });
+
+      setRutaIdGuardada(rutaCreada.id);
+
+      // 3. Si hay operador seleccionado, asignar y notificar
+      if (operadorSeleccionado) {
+        const operador = operadores.find((o) => o.id === operadorSeleccionado);
+        await notificarAsignacionRuta(
+          operadorSeleccionado,
+          nombreRuta,
+          ruta.puntos.length
+        );
+        setMensajeConfirmacion(
+          `✓ Ruta guardada y asignada correctamente a ${operador?.nombre ?? "operador"}`
+        );
+      } else {
+        setMensajeConfirmacion("✓ Ruta guardada en el historial.");
+      }
+
       setGuardadoOk(true);
     } catch (error) {
       setErrorAccion(
@@ -396,17 +445,47 @@ export default function RoutePanel({
               </p>
             )}
 
+            <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 dark:border-blue-900/50 dark:bg-blue-950/30">
+              <label className="text-xs font-semibold text-blue-900 dark:text-blue-100">
+                Asignar ruta a Operador
+              </label>
+              {operadores.length === 0 ? (
+                <p className="mt-1 text-xs text-blue-700 dark:text-blue-300">
+                  No hay operadores disponibles.
+                </p>
+              ) : (
+                <select
+                  value={operadorSeleccionado}
+                  onChange={(e) => setOperadorSeleccionado(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-blue-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-blue-700 dark:bg-zinc-800 dark:text-zinc-100"
+                >
+                  <option value="">Sin asignar (solo guardar)</option>
+                  {operadores.map((operador) => (
+                    <option key={operador.id} value={operador.id}>
+                      {operador.nombre} ({operador.email})
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
             <button
               onClick={guardarRuta}
-              disabled={guardando}
-              className="w-full rounded-xl border border-emerald-600 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-emerald-500/50 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20"
+              disabled={guardando || guardadoOk}
+              className="w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {guardando ? "Guardando…" : "Guardar / Confirmar Ruta"}
+              {guardando
+                ? "Guardando…"
+                : guardadoOk
+                  ? "✓ Guardada"
+                  : operadorSeleccionado
+                    ? "Guardar y Asignar Ruta"
+                    : "Guardar / Confirmar Ruta"}
             </button>
 
             {guardadoOk && (
               <p className="rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
-                Ruta guardada en el historial.
+                {mensajeConfirmacion}
               </p>
             )}
 
