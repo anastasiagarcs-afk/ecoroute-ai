@@ -576,6 +576,44 @@ export async function vaciarContenedor(idContenedor: string): Promise<void> {
   notificar();
 }
 
+export async function vaciarContenedoresLote(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  asegurarCache();
+
+  if (estaSupabaseConfigurado()) {
+    try {
+      const supabase = getSupabaseClient();
+      const { error } = await supabase
+        .from("Contenedores")
+        .update({
+          nivel_llenado: 0,
+          estado: "vacio",
+          ultima_lectura: new Date().toISOString(),
+        })
+        .in("id", ids);
+      if (error) throw error;
+      modoLocal = false;
+    } catch (error) {
+      console.error("Error al vaciar contenedores en lote:", JSON.stringify(error, null, 2));
+      modoLocal = true;
+    }
+  }
+
+  const ahora = new Date().toISOString();
+  cache = (cache ?? []).map((contenedor) =>
+    ids.includes(contenedor.id)
+      ? {
+          ...contenedor,
+          nivel_llenado: 0,
+          estado: "vacio" as EstadoContenedor,
+          ultima_lectura: ahora,
+        }
+      : contenedor
+  );
+  escribirLocal(cache ?? []);
+  notificar();
+}
+
 export async function actualizarContenedor(
   idContenedor: string,
   datos: DatosActualizacionContenedor

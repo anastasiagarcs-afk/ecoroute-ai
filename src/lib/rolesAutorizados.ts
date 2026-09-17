@@ -47,7 +47,6 @@ const PERMISOS: Record<RolUsuario, AccionSistema[]> = {
   ],
   Operador: [
     "ver_mapa",
-    "gestionar_contenedores",
     "vaciar_contenedor",
     "optimizar_rutas",
     "ver_historial",

@@ -29,6 +29,8 @@ export interface DatosRegistroRuta {
   contenedores: Contenedor[];
   fuenteRuta: FuenteRuta;
   geometria: UbicacionPunto[];
+  operador_id?: string | null;
+  ruta_id?: string | null;
 }
 
 const EVENTO_ACTUALIZADO = "ecoroute:historial-rutas:actualizado";
@@ -301,7 +303,8 @@ export async function registrarRutaEjecutada(
   }
 
   const valores: InsertHistorialRuta = {
-    ruta_id: null,
+    ruta_id: datos.ruta_id ?? null,
+    operador_id: datos.operador_id ?? null,
     fecha_ejecucion: ahora.toISOString(),
     contenedores_recogidos: datos.contenedores.map(
       (contenedor) => contenedor.id
@@ -321,7 +324,17 @@ export async function registrarRutaEjecutada(
 
     return guardado;
   } catch (error) {
-    console.error("Error al conectar con Supabase:", JSON.stringify(error, null, 2));
+    const esErrorRLS =
+      error instanceof Error &&
+      (error.message.includes("42501") || error.message.includes("permission denied"));
+    if (esErrorRLS) {
+      console.warn(
+        "[EcoRoute] Error de permisos RLS al guardar historial. Guardando localmente:",
+        error.message
+      );
+    } else {
+      console.error("Error al conectar con Supabase:", JSON.stringify(error, null, 2));
+    }
     activarModoLocal();
     registrarEnLocal(registro);
     return registro;

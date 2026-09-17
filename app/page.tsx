@@ -1,26 +1,33 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useSyncExternalStore } from "react";
 import DashboardGerencial from "@/components/DashboardGerencial";
+import HistorialOperador from "@/components/HistorialOperador";
 import NuevoContenedorModal from "@/components/NuevoContenedorModal";
+import PanelRutaOperador from "@/components/PanelRutaOperador";
 import RoutesMapView from "@/components/RoutesMapView";
 import { useContenedores } from "@/hooks/useContenedores";
 import { estaSupabaseConfigurado } from "@/lib/supabaseClient";
 import { obtenerSnapshotSesion } from "@/lib/authService";
 import { puede } from "@/lib/rolesAutorizados";
-import { obtenerRutaActivaOperador } from "@/lib/operadoresService";
+import { obtenerRutaActivaOperador, obtenerRutasActivasOperador, obtenerHistorialOperador } from "@/lib/operadoresService";
 import type { Ruta, UbicacionPunto } from "@/types/schema";
 
-const MapPreview = dynamic(() => import("@/components/Map"), { ssr: false });
+const Map = dynamic(() => import("@/components/Map"), { ssr: false });
 
 const CENTRO_CIUDAD: UbicacionPunto = { lat: 8.34739, lng: -62.65371 };
 
 export default function Home() {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [rutaActiva, setRutaActiva] = useState<Ruta | null>(null);
+  const [tabOperador, setTabOperador] = useState<"rutas" | "historial">("rutas");
+  const [subTabOperador, setSubTabOperador] = useState<"activas" | "completadas">("activas");
+  const [rutasActivasOperador, setRutasActivasOperador] = useState<Ruta[]>([]);
+  const [rutasCompletadasOperador, setRutasCompletadasOperador] = useState<Ruta[]>([]);
+  const [modoLectura, setModoLectura] = useState(false);
 
   const { contenedores, estado: estadoContenedores } = useContenedores();
 
@@ -30,12 +37,43 @@ export default function Home() {
     () => null
   );
 
-  // Cargar ruta activa para operadores
-  useEffect(() => {
+  const cargarRutasOperador = useCallback(async () => {
+    if (sesion?.rol !== "Operador" || !sesion.usuario?.id) return;
+    const [activas, completadas] = await Promise.all([
+      obtenerRutasActivasOperador(sesion.usuario.id),
+      obtenerHistorialOperador(sesion.usuario.id),
+    ]);
+    setRutasActivasOperador(activas);
+    setRutasCompletadasOperador(completadas);
+  }, [sesion]);
+
+  const cargarRutaActiva = useCallback(() => {
     if (sesion?.rol === "Operador" && sesion.usuario?.id) {
-      obtenerRutaActivaOperador(sesion.usuario.id).then(setRutaActiva);
+      obtenerRutaActivaOperador(sesion.usuario.id).then((ruta) => {
+        const estado = ruta?.estado ?? "pendiente";
+        if (estado === "aceptada" || estado === "en_progreso") {
+          setRutaActiva(ruta);
+          setModoLectura(false);
+        } else {
+          setRutaActiva(null);
+        }
+      });
     }
   }, [sesion]);
+
+  useEffect(() => {
+    if (sesion?.rol !== "Operador" || !sesion.usuario?.id) return;
+
+    cargarRutaActiva();
+    cargarRutasOperador();
+
+    const handler = () => {
+      cargarRutaActiva();
+      cargarRutasOperador();
+    };
+    window.addEventListener("ecoroute:ruta-aceptada", handler);
+    return () => window.removeEventListener("ecoroute:ruta-aceptada", handler);
+  }, [sesion, cargarRutaActiva, cargarRutasOperador]);
 
   const contenedoresVisibles =
     estadoContenedores.estadoCarga === "cargando" ? [] : contenedores;
@@ -128,7 +166,7 @@ export default function Home() {
 
           <section className="mx-auto w-full max-w-5xl overflow-hidden rounded-2xl border border-zinc-200 shadow-sm dark:border-zinc-800">
             <div className="h-[40vh] w-full sm:h-[50vh]">
-              <MapPreview
+              <Map
                 contenedores={contenedores}
                 centro={CENTRO_CIUDAD}
                 zoom={12}
@@ -210,33 +248,162 @@ export default function Home() {
         </section>
       )}
 
-      {sesion.rol === "Operador" && rutaActiva && (
-        <section className="rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/50 dark:bg-blue-950/30">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-                Ruta Asignada: {rutaActiva.nombre}
-              </h3>
-              <p className="mt-1 text-xs text-blue-700 dark:text-blue-300">
-                {rutaActiva.contenedores_asignados?.length ?? 0} contenedor(es) ·{" "}
-                {rutaActiva.distancia_total
-                  ? `${rutaActiva.distancia_total} km`
-                  : "Distancia no calculada"}{" "}
-                · {rutaActiva.tiempo_estimado ?? "Tiempo no estimado"}
-              </p>
-            </div>
-            <span className="shrink-0 rounded-full bg-blue-600 px-2.5 py-0.5 text-[10px] font-semibold text-white">
-              Pendiente
-            </span>
-          </div>
-        </section>
+      {sesion.rol === "Operador" && (
+        <div className="flex gap-2 border-b border-zinc-200 dark:border-zinc-800">
+          <button
+            onClick={() => { setTabOperador("rutas"); setRutaActiva(null); setModoLectura(false); }}
+            className={`border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+              tabOperador === "rutas"
+                ? "border-emerald-600 text-emerald-700 dark:border-emerald-400 dark:text-emerald-400"
+                : "border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+            }`}
+          >
+            Rutas
+          </button>
+          <button
+            onClick={() => setTabOperador("historial")}
+            className={`border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+              tabOperador === "historial"
+                ? "border-emerald-600 text-emerald-700 dark:border-emerald-400 dark:text-emerald-400"
+                : "border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+            }`}
+          >
+            Mi Historial
+          </button>
+        </div>
       )}
 
       {puede(sesion.rol, "ver_dashboard") && <DashboardGerencial />}
 
-      <section className="flex flex-1 justify-center">
-        <RoutesMapView contenedores={contenedoresVisibles} centro={CENTRO_CIUDAD} rol={sesion.rol} />
-      </section>
+      {sesion.rol === "Operador" ? (
+        <section className="grid w-full grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
+          <div className="relative h-[60vh] w-full overflow-hidden rounded-2xl border border-zinc-200 shadow-sm dark:border-zinc-800 lg:h-[65vh]">
+            <Map
+              contenedores={rutaActiva && tabOperador === "rutas"
+                ? contenedoresVisibles.filter((c) => rutaActiva.contenedores_asignados.includes(c.id))
+                : contenedoresVisibles}
+              centro={CENTRO_CIUDAD}
+              zoom={13}
+              rutaPuntos={rutaActiva && tabOperador === "rutas" ? (rutaActiva.geometria ?? []) : []}
+              paradasRuta={rutaActiva && tabOperador === "rutas" ? (rutaActiva.geometria ?? []) : []}
+              rol={sesion.rol}
+            />
+          </div>
+
+          <div className="max-h-[80vh] w-full overflow-y-auto lg:max-h-[65vh]">
+            {tabOperador === "rutas" ? (
+              rutaActiva ? (
+                <PanelRutaOperador
+                  ruta={rutaActiva}
+                  contenedores={contenedoresVisibles}
+                  onRutaCompletada={() => { cargarRutaActiva(); cargarRutasOperador(); }}
+                  modoLectura={modoLectura}
+                />
+              ) : (
+                <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+                  <div className="mb-3 flex gap-1 border-b border-zinc-100 dark:border-zinc-800">
+                    <button
+                      onClick={() => setSubTabOperador("activas")}
+                      className={`flex-1 border-b-2 px-3 py-1.5 text-xs font-medium transition-colors ${
+                        subTabOperador === "activas"
+                          ? "border-emerald-600 text-emerald-700 dark:border-emerald-400 dark:text-emerald-400"
+                          : "border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400"
+                      }`}
+                    >
+                      En Progreso ({rutasActivasOperador.length})
+                    </button>
+                    <button
+                      onClick={() => setSubTabOperador("completadas")}
+                      className={`flex-1 border-b-2 px-3 py-1.5 text-xs font-medium transition-colors ${
+                        subTabOperador === "completadas"
+                          ? "border-emerald-600 text-emerald-700 dark:border-emerald-400 dark:text-emerald-400"
+                          : "border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400"
+                      }`}
+                    >
+                      Completadas ({rutasCompletadasOperador.length})
+                    </button>
+                  </div>
+
+                  {subTabOperador === "activas" ? (
+                    rutasActivasOperador.length === 0 ? (
+                      <p className="py-6 text-center text-xs text-zinc-500 dark:text-zinc-400">
+                        No tienes rutas activas. Espera una asignacion desde la campana de notificaciones.
+                      </p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {rutasActivasOperador.map((ruta) => (
+                          <li key={ruta.id} className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">{ruta.nombre}</p>
+                                <p className="mt-0.5 text-[10px] text-zinc-500 dark:text-zinc-400">
+                                  {ruta.contenedores_asignados.length} contenedores · {ruta.distancia_total?.toFixed(1) ?? "—"} km
+                                </p>
+                                <span className={`mt-1 inline-block rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${
+                                  ruta.estado === "en_progreso"
+                                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                                    : ruta.estado === "aceptada"
+                                      ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                                      : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                                }`}>
+                                  {ruta.estado === "en_progreso" ? "En Progreso" : ruta.estado === "aceptada" ? "Aceptada" : "Pendiente"}
+                                </span>
+                              </div>
+                              <button
+                                onClick={() => { setRutaActiva(ruta); setModoLectura(false); }}
+                                className="shrink-0 rounded-lg bg-emerald-600 px-2.5 py-1 text-[10px] font-semibold text-white transition-colors hover:bg-emerald-700"
+                              >
+                                Continuar Ruta
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )
+                  ) : (
+                    rutasCompletadasOperador.length === 0 ? (
+                      <p className="py-6 text-center text-xs text-zinc-500 dark:text-zinc-400">
+                        No tienes rutas completadas aun.
+                      </p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {rutasCompletadasOperador.map((ruta) => (
+                          <li key={ruta.id} className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">{ruta.nombre}</p>
+                                <p className="mt-0.5 text-[10px] text-zinc-500 dark:text-zinc-400">
+                                  {ruta.contenedores_asignados.length} contenedores · {ruta.ultima_ejecucion ? new Date(ruta.ultima_ejecucion).toLocaleDateString() : "—"}
+                                </p>
+                                <span className="mt-1 inline-block rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                                  Completada
+                                </span>
+                              </div>
+                              <button
+                                onClick={() => { setRutaActiva(ruta); setModoLectura(true); }}
+                                disabled={!Array.isArray(ruta.geometria) || (ruta.geometria?.length ?? 0) < 2}
+                                className="shrink-0 rounded-lg border border-zinc-300 bg-white px-2.5 py-1 text-[10px] font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+                              >
+                                Ver en Mapa
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )
+                  )}
+                </div>
+              )
+            ) : (
+              <HistorialOperador operadorId={sesion.usuario.id} />
+            )}
+          </div>
+        </section>
+      ) : (
+        <section className="flex flex-1 justify-center">
+          <RoutesMapView contenedores={contenedoresVisibles} centro={CENTRO_CIUDAD} rol={sesion.rol} />
+        </section>
+      )}
 
       {modalAbierto && (
         <NuevoContenedorModal onCerrar={() => setModalAbierto(false)} />

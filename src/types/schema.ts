@@ -33,6 +33,14 @@ export type RolUsuario = "Admin" | "Gerente" | "Operador" | "Ciudadano";
 
 export type EstadoSolicitud = "pendiente" | "aprobada" | "rechazada";
 
+export type EstadoRuta =
+  | "pendiente"
+  | "aceptada"
+  | "rechazada"
+  | "en_progreso"
+  | "completada"
+  | "cancelada";
+
 export type MaterialReciclaje =
   | "organico"
   | "vidrio"
@@ -44,6 +52,7 @@ export type TipoNotificacion =
   | "alerta_llenado"
   | "alerta_predictiva"
   | "solicitud_acceso"
+  | "asignacion_ruta"
   | "jornada"
   | "sistema";
 
@@ -94,12 +103,16 @@ export type Ruta = {
   distancia_total: number | null;
   tiempo_estimado: string | null;
   operador_asignado: string | null;
+  estado: EstadoRuta;
+  geometria: UbicacionPunto[] | null;
   created_at: string;
 }
 
 export type InsertRuta = Omit<Ruta, "id" | "created_at"> & {
   id?: string;
   created_at?: string;
+  estado?: EstadoRuta;
+  geometria?: UbicacionPunto[] | null;
 };
 
 export type UpdateRuta = Partial<Ruta>;
@@ -144,6 +157,7 @@ export type UpdatePuntosReciclaje = Partial<PuntosReciclaje>;
 export type HistorialRuta = {
   id: string;
   ruta_id: string | null;
+  operador_id: string | null;
   fecha_ejecucion: string;
   contenedores_recogidos: string[];
   tiempo_real: string | null;
@@ -157,6 +171,7 @@ export type HistorialRuta = {
 export type InsertHistorialRuta = Omit<HistorialRuta, "id" | "created_at"> & {
   id?: string;
   created_at?: string;
+  operador_id?: string | null;
 };
 
 export type UpdateHistorialRuta = Partial<HistorialRuta>;

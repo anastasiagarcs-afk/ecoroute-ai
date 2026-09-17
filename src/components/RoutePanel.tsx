@@ -22,12 +22,17 @@ import {
   listarOperadores,
   crearRutaConAsignacion,
   notificarAsignacionRuta,
+  listarRutasGuardadas,
+  asignarRutaAOperador,
 } from "@/lib/operadoresService";
 import { vaciarContenedor } from "@/lib/contenedoresStore";
+import { puede } from "@/lib/rolesAutorizados";
+import { obtenerSnapshotSesion } from "@/lib/authService";
 import type { RegistroHistorialRuta } from "@/lib/historialRutas";
 import type {
   Contenedor,
   EstadoContenedor,
+  Ruta,
   UbicacionPunto,
   Usuario,
 } from "@/types/schema";
@@ -106,9 +111,83 @@ export default function RoutePanel({
   const [rutaIdGuardada, setRutaIdGuardada] = useState<string | null>(null);
   const [mensajeConfirmacion, setMensajeConfirmacion] = useState<string>("");
 
+  const [rutasGuardadas, setRutasGuardadas] = useState<Ruta[]>([]);
+  const [cargandoRutasGuardadas, setCargandoRutasGuardadas] = useState(false);
+  const [mostrarRutasGuardadas, setMostrarRutasGuardadas] = useState(false);
+  const [rutaGuardadaSeleccionada, setRutaGuardadaSeleccionada] = useState<Ruta | null>(null);
+  const [asignandoRutaGuardada, setAsignandoRutaGuardada] = useState(false);
+
+  const sesion = useSyncExternalStore(
+    () => () => {},
+    obtenerSnapshotSesion,
+    () => null
+  );
+  const puedeEditar = sesion ? puede(sesion.rol, "editar_contenedor") : false;
+  const puedeEliminar = sesion ? puede(sesion.rol, "eliminar_contenedor") : false;
+
   useEffect(() => {
     listarOperadores().then(setOperadores);
   }, []);
+
+  const cargarRutasGuardadas = async () => {
+    setCargandoRutasGuardadas(true);
+    const rutas = await listarRutasGuardadas();
+    setRutasGuardadas(rutas);
+    setCargandoRutasGuardadas(false);
+  };
+
+  const seleccionarRutaGuardada = (ruta: Ruta) => {
+    setRutaGuardadaSeleccionada(ruta);
+    setOperadorSeleccionado(ruta.operador_asignado ?? "");
+    setRutaIdGuardada(ruta.id);
+
+    const contenedoresAsignados = contenedores.filter((c) =>
+      ruta.contenedores_asignados.includes(c.id)
+    );
+
+    if (contenedoresAsignados.length > 0) {
+      const puntos = contenedoresAsignados.map((c, i) => ({
+        contenedor: c,
+        distanciaDesdeAnteriorKm: i === 0 ? 0 : 0,
+        distanciaAcumuladaKm: 0,
+      }));
+
+      const rutaOptimizada: RutaOptimizada = {
+        puntos,
+        geometria: ruta.geometria ?? [],
+        contenedoresCriticos: contenedoresAsignados.length,
+        contenedoresAtendidos: contenedoresAsignados.length,
+        distanciaTotalKm: ruta.distancia_total ?? 0,
+        tiempoEstimadoMin: 0,
+        fuenteRuta: "osrm",
+      };
+
+      onRutaGenerada?.(rutaOptimizada);
+    }
+  };
+
+  const asignarRutaGuardada = async () => {
+    if (!rutaGuardadaSeleccionada || !operadorSeleccionado) return;
+    setAsignandoRutaGuardada(true);
+    try {
+      await asignarRutaAOperador(rutaGuardadaSeleccionada.id, operadorSeleccionado);
+      const operador = operadores.find((o) => o.id === operadorSeleccionado);
+      await notificarAsignacionRuta(
+        operadorSeleccionado,
+        rutaGuardadaSeleccionada.nombre,
+        rutaGuardadaSeleccionada.contenedores_asignados.length,
+        rutaGuardadaSeleccionada.id
+      );
+      setMensajeConfirmacion(
+        `✓ Ruta "${rutaGuardadaSeleccionada.nombre}" asignada a ${operador?.nombre ?? "operador"}`
+      );
+      setGuardadoOk(true);
+    } catch {
+      setErrorAccion("No se pudo asignar la ruta al operador");
+    } finally {
+      setAsignandoRutaGuardada(false);
+    }
+  };
 
   const historial = useSyncExternalStore(
     suscribirseAlHistorial,
@@ -195,6 +274,8 @@ export default function RoutePanel({
         distancia_total: Math.round(ruta.distanciaTotalKm * 100) / 100,
         tiempo_estimado: `${Math.round(ruta.tiempoEstimadoMin)} min`,
         operador_asignado: operadorSeleccionado || null,
+        estado: "pendiente",
+        geometria: ruta.geometria,
       });
 
       setRutaIdGuardada(rutaCreada.id);
@@ -205,7 +286,8 @@ export default function RoutePanel({
         await notificarAsignacionRuta(
           operadorSeleccionado,
           nombreRuta,
-          ruta.puntos.length
+          ruta.puntos.length,
+          rutaCreada.id
         );
         setMensajeConfirmacion(
           `✓ Ruta guardada y asignada correctamente a ${operador?.nombre ?? "operador"}`
@@ -367,44 +449,156 @@ export default function RoutePanel({
                       >
                         {vaciandoId === contenedor.id ? "Vaciando…" : "Vaciar"}
                       </button>
-                      <button
-                        type="button"
-                        title="Editar contenedor"
-                        onClick={() => setContenedorAEditar(contenedor)}
-                        className="inline-flex items-center gap-1 rounded-lg bg-zinc-900 px-2.5 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600"
-                      >
-                        Editar
-                      </button>
-                      <button
-                        type="button"
-                        title="Eliminar contenedor del mapa y de Supabase"
-                        onClick={() => setContenedorAEliminar(contenedor)}
-                        className="inline-flex items-center gap-1 rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-red-700"
-                      >
-                        <svg
-                          width="11"
-                          height="11"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden="true"
+                      {puedeEditar && (
+                        <button
+                          type="button"
+                          title="Editar contenedor"
+                          onClick={() => setContenedorAEditar(contenedor)}
+                          className="inline-flex items-center gap-1 rounded-lg bg-zinc-900 px-2.5 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600"
                         >
-                          <path d="M3 6h18" />
-                          <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-                          <path d="M10 11v6" />
-                          <path d="M14 11v6" />
-                        </svg>
-                        Eliminar
-                      </button>
+                          Editar
+                        </button>
+                      )}
+                      {puedeEliminar && (
+                        <button
+                          type="button"
+                          title="Eliminar contenedor del mapa y de Supabase"
+                          onClick={() => setContenedorAEliminar(contenedor)}
+                          className="inline-flex items-center gap-1 rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-red-700"
+                        >
+                          <svg
+                            width="11"
+                            height="11"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <path d="M3 6h18" />
+                            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                            <path d="M10 11v6" />
+                            <path d="M14 11v6" />
+                          </svg>
+                          Eliminar
+                        </button>
+                      )}
                     </div>
                   </li>
                 );
               })}
             </ul>
+          )}
+        </section>
+
+        <section className="border-t border-zinc-200 pt-4 dark:border-zinc-800">
+          <button
+            type="button"
+            onClick={() => {
+              setMostrarRutasGuardadas((mostrar) => !mostrar);
+              if (!mostrarRutasGuardadas) cargarRutasGuardadas();
+            }}
+            className="flex items-center gap-2 text-sm font-semibold text-zinc-900 dark:text-zinc-50"
+          >
+            Rutas Guardadas ({rutasGuardadas.length})
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">
+              {mostrarRutasGuardadas ? "▲" : "▼"}
+            </span>
+          </button>
+
+          {mostrarRutasGuardadas && (
+            <div className="mt-3">
+              {cargandoRutasGuardadas ? (
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Cargando rutas guardadas…
+                </p>
+              ) : rutasGuardadas.length === 0 ? (
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  No hay rutas guardadas aún.
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {rutasGuardadas.map((rutaGuardada) => (
+                    <li
+                      key={rutaGuardada.id}
+                      className={`rounded-lg border px-3 py-2 ${
+                        rutaGuardadaSeleccionada?.id === rutaGuardada.id
+                          ? "border-blue-400 bg-blue-50 dark:border-blue-600 dark:bg-blue-950/30"
+                          : "border-zinc-200 dark:border-zinc-700"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                            {rutaGuardada.nombre}
+                          </p>
+                          <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
+                            {rutaGuardada.contenedores_asignados.length} contenedores ·{" "}
+                            {rutaGuardada.distancia_total
+                              ? `${rutaGuardada.distancia_total} km`
+                              : "—"}{" "}
+                            · {rutaGuardada.tiempo_estimado ?? "—"}
+                          </p>
+                        </div>
+                        <span
+                          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                            rutaGuardada.estado === "completada"
+                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                              : rutaGuardada.estado === "en_progreso"
+                                ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                                : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                          }`}
+                        >
+                          {rutaGuardada.estado}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => seleccionarRutaGuardada(rutaGuardada)}
+                        className={`mt-2 inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors ${
+                          rutaGuardadaSeleccionada?.id === rutaGuardada.id
+                            ? "border-blue-600 bg-blue-600 text-white"
+                            : "border-zinc-200 text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                        }`}
+                      >
+                        {rutaGuardadaSeleccionada?.id === rutaGuardada.id
+                          ? "Seleccionada"
+                          : "Cargar en mapa"}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {rutaGuardadaSeleccionada && (
+                <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-900/50 dark:bg-blue-950/30">
+                  <label className="text-xs font-semibold text-blue-900 dark:text-blue-100">
+                    Asignar "{rutaGuardadaSeleccionada.nombre}" a Operador
+                  </label>
+                  <select
+                    value={operadorSeleccionado}
+                    onChange={(e) => setOperadorSeleccionado(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-blue-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-blue-700 dark:bg-zinc-800 dark:text-zinc-100"
+                  >
+                    <option value="">Sin asignar</option>
+                    {operadores.map((operador) => (
+                      <option key={operador.id} value={operador.id}>
+                        {operador.nombre} ({operador.email})
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={asignarRutaGuardada}
+                    disabled={!operadorSeleccionado || asignandoRutaGuardada}
+                    className="mt-2 w-full rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {asignandoRutaGuardada ? "Asignando…" : "Asignar Ruta a Operador"}
+                  </button>
+                </div>
+              )}
+            </div>
           )}
         </section>
 
