@@ -18,6 +18,7 @@ export const metadata: Metadata = {
   title: "EcoRoute AI",
   description:
     "Sistema web de optimización dinámica de rutas para la recolección eficiente de residuos sólidos municipales",
+  icons: { icon: "/favicon.svg" },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
