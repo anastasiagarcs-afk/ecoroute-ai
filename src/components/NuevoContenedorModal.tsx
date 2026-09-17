@@ -1,12 +1,19 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import dynamic from "next/dynamic";
+import type { Map as LeafletMap, Marker as LeafletMarker } from "leaflet";
 import {
   MATERIALES_GAMIFICACION,
   obtenerReglaMaterialGamificacion,
 } from "@/lib/gamificacion";
 import { registrarContenedor } from "@/lib/contenedoresStore";
+import { useContenedores } from "@/hooks/useContenedores";
 import type { Contenedor, EstadoContenedor, MaterialReciclaje } from "@/types/schema";
+
+import "leaflet/dist/leaflet.css";
+
+const CENTRO_DEFAULT = { lat: 8.34739, lng: -62.65371 };
 
 interface NuevoContenedorModalProps {
   onCerrar: () => void;
@@ -21,10 +28,184 @@ function formatoCoordenada(valor: number): string {
   return `${valor.toFixed(5)}`;
 }
 
+interface MapaSelectorProps {
+  lat: string;
+  lng: string;
+  onUbicacionCambio: (lat: string, lng: string) => void;
+  contenedoresExistentes: Contenedor[];
+}
+
+function MapaSelectorUbicacion({
+  lat,
+  lng,
+  onUbicacionCambio,
+  contenedoresExistentes,
+}: MapaSelectorProps) {
+  const contenedorRef = useRef<HTMLDivElement>(null);
+  const mapaRef = useRef<LeafletMap | null>(null);
+  const marcadorRef = useRef<LeafletMarker | null>(null);
+  const [mapaListo, setMapaListo] = useState(false);
+  const onUbicacionCambioRef = useRef(onUbicacionCambio);
+  onUbicacionCambioRef.current = onUbicacionCambio;
+
+  useEffect(() => {
+    let activo = true;
+
+    async function init() {
+      const L = await import("leaflet");
+      if (!activo || !contenedorRef.current || mapaRef.current) return;
+
+      const latNum = Number(lat);
+      const lngNum = Number(lng);
+
+      let center: [number, number];
+
+      if (Number.isFinite(latNum) && Number.isFinite(lngNum)) {
+        center = [latNum, lngNum];
+      } else {
+        const conUbicacion = contenedoresExistentes.filter(
+          (c) => c.ubicacion && c.ubicacion.lat !== undefined && c.ubicacion.lng !== undefined
+        );
+        if (conUbicacion.length > 0) {
+          const avgLat =
+            conUbicacion.reduce((sum, c) => sum + c.ubicacion!.lat, 0) /
+            conUbicacion.length;
+          const avgLng =
+            conUbicacion.reduce((sum, c) => sum + c.ubicacion!.lng, 0) /
+            conUbicacion.length;
+          center = [avgLat, avgLng];
+        } else {
+          center = [CENTRO_DEFAULT.lat, CENTRO_DEFAULT.lng];
+        }
+      }
+
+      const mapa = L.map(contenedorRef.current, {
+        zoomControl: true,
+        attributionControl: false,
+      }).setView(center, 15);
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      }).addTo(mapa);
+
+      const iconoExistente = L.divIcon({
+        className: "",
+        html: `<div style="width:14px;height:14px;background:#a8a29e;border:2px solid white;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.25);opacity:0.65;"></div>`,
+        iconSize: [14, 14],
+        iconAnchor: [7, 7],
+        popupAnchor: [0, -10],
+      });
+
+      for (const c of contenedoresExistentes) {
+        if (!c.ubicacion) continue;
+        const latC = Number(c.ubicacion.lat);
+        const lngC = Number(c.ubicacion.lng);
+        if (!Number.isFinite(latC) || !Number.isFinite(lngC)) continue;
+        L.marker([latC, lngC], { icon: iconoExistente, interactive: true })
+          .bindPopup(
+            `<div style="font-size:12px;font-weight:600;">${c.numero_identificacion}<br/><span style="font-weight:400;text-transform:capitalize;">${c.tipo_residuo}${c.zona ? ` · ${c.zona}` : ""}</span></div>`
+          )
+          .addTo(mapa);
+      }
+
+      mapa.on("click", (e: { latlng: { lat: number; lng: number } }) => {
+        onUbicacionCambioRef.current(
+          e.latlng.lat.toFixed(5),
+          e.latlng.lng.toFixed(5)
+        );
+      });
+
+      mapaRef.current = mapa;
+      setMapaListo(true);
+    }
+
+    init();
+
+    return () => {
+      activo = false;
+      mapaRef.current?.remove();
+      mapaRef.current = null;
+      marcadorRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!mapaListo) return;
+
+    let activo = true;
+
+    async function syncMarker() {
+      const L = await import("leaflet");
+      if (!activo || !mapaRef.current) return;
+
+      const latNum = Number(lat);
+      const lngNum = Number(lng);
+      if (!Number.isFinite(latNum) || !Number.isFinite(lngNum)) return;
+
+      if (!marcadorRef.current) {
+        const icon = L.divIcon({
+          className: "",
+          html: `<div style="width:24px;height:24px;background:#10b981;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>`,
+          iconSize: [24, 24],
+          iconAnchor: [12, 12],
+        });
+        const marcador = L.marker([latNum, lngNum], {
+          draggable: true,
+          icon,
+        }).addTo(mapaRef.current);
+        marcador.on(
+          "dragend",
+          (e: {
+            target: { getLatLng: () => { lat: number; lng: number } };
+          }) => {
+            const pos = e.target.getLatLng();
+            onUbicacionCambioRef.current(
+              pos.lat.toFixed(5),
+              pos.lng.toFixed(5)
+            );
+          }
+        );
+        marcadorRef.current = marcador;
+      } else {
+        marcadorRef.current.setLatLng([latNum, lngNum]);
+      }
+
+      mapaRef.current.setView([latNum, lngNum]);
+    }
+
+    syncMarker();
+
+    return () => {
+      activo = false;
+    };
+  }, [mapaListo, lat, lng]);
+
+  return (
+    <div className="relative">
+      <div
+        ref={contenedorRef}
+        className="h-60 w-full rounded-xl border border-zinc-200 dark:border-zinc-700"
+      />
+      {!mapaListo && (
+        <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-zinc-100 text-xs text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+          Cargando mapa…
+        </div>
+      )}
+    </div>
+  );
+}
+
+const MapaDinamico = dynamic(() => Promise.resolve(MapaSelectorUbicacion), {
+  ssr: false,
+});
+
 export default function NuevoContenedorModal({
   onCerrar,
   onRegistrado,
 }: NuevoContenedorModalProps) {
+  const { contenedores } = useContenedores();
   const [numeroIdentificacion, setNumeroIdentificacion] = useState("");
   const [tipoResiduo, setTipoResiduo] = useState<MaterialReciclaje | "">("");
   const [nivelLlenado, setNivelLlenado] = useState("0");
@@ -50,6 +231,12 @@ export default function NuevoContenedorModal({
       return null;
     }
     return { lat: latNumero, lng: lngNumero };
+  };
+
+  const handleUbicacionCambio = (nuevaLat: string, nuevaLng: string) => {
+    setLat(nuevaLat);
+    setLng(nuevaLng);
+    setError(null);
   };
 
   const llenarConUbicacionActual = () => {
@@ -273,8 +460,22 @@ export default function NuevoContenedorModal({
 
           <fieldset className="flex flex-col gap-2">
             <legend className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-              Coordenadas
+              Ubicación en el mapa
             </legend>
+
+            <MapaDinamico
+              lat={lat}
+              lng={lng}
+              onUbicacionCambio={handleUbicacionCambio}
+              contenedoresExistentes={contenedores}
+            />
+
+            <p className="text-[11px] text-zinc-400 dark:text-zinc-500">
+              Los marcadores grises muestran contenedores existentes. Haz clic
+              en el mapa o arrastra el marcador verde para ubicar el nuevo
+              contenedor.
+            </p>
+
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-2">
                 <label
@@ -323,11 +524,14 @@ export default function NuevoContenedorModal({
               disabled={obteniendoUbicacion}
               className="inline-flex w-fit items-center gap-1 rounded-lg border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
             >
-              {obteniendoUbicacion ? "Obteniendo ubicación…" : "Usar mi ubicación actual"}
+              {obteniendoUbicacion
+                ? "Obteniendo ubicación…"
+                : "Usar mi ubicación actual"}
             </button>
             {coordenadasValidas() && (
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                Marcador previsto en ({formatoCoordenada(coordenadasValidas()!.lat)},{" "}
+                Marcador previsto en (
+                {formatoCoordenada(coordenadasValidas()!.lat)},{" "}
                 {formatoCoordenada(coordenadasValidas()!.lng)})
               </p>
             )}
