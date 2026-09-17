@@ -9,11 +9,14 @@ import HistorialOperador from "@/components/HistorialOperador";
 import NuevoContenedorModal from "@/components/NuevoContenedorModal";
 import PanelRutaOperador from "@/components/PanelRutaOperador";
 import RoutesMapView from "@/components/RoutesMapView";
+import CierreJornadaModal from "@/components/CierreJornadaModal";
 import { useContenedores } from "@/hooks/useContenedores";
 import { estaSupabaseConfigurado } from "@/lib/supabaseClient";
 import { obtenerSnapshotSesion } from "@/lib/authService";
 import { puede } from "@/lib/rolesAutorizados";
 import { obtenerRutaActivaOperador, obtenerRutasActivasOperador, obtenerHistorialOperador } from "@/lib/operadoresService";
+import { cerrarJornada, type ResumenJornada } from "@/lib/jornadaService";
+import { mostrarToast } from "@/lib/toastStore";
 import type { Ruta, UbicacionPunto } from "@/types/schema";
 
 const Map = dynamic(() => import("@/components/Map"), { ssr: false });
@@ -28,6 +31,9 @@ export default function Home() {
   const [rutasActivasOperador, setRutasActivasOperador] = useState<Ruta[]>([]);
   const [rutasCompletadasOperador, setRutasCompletadasOperador] = useState<Ruta[]>([]);
   const [modoLectura, setModoLectura] = useState(false);
+  const [cierreJornadaVisible, setCierreJornadaVisible] = useState(false);
+  const [resumenJornada, setResumenJornada] = useState<ResumenJornada | null>(null);
+  const [guardandoJornada, setGuardandoJornada] = useState(false);
 
   const { contenedores, estado: estadoContenedores } = useContenedores();
 
@@ -80,6 +86,31 @@ export default function Home() {
 
   const datosRespaldo =
     !estaSupabaseConfigurado() || estadoContenedores.estadoCarga === "error";
+
+  const handleCerrarJornada = useCallback((resumen: ResumenJornada) => {
+    setResumenJornada(resumen);
+    setCierreJornadaVisible(true);
+  }, []);
+
+  const handleConfirmarCierre = useCallback(async () => {
+    if (!resumenJornada || !sesion?.usuario?.id) return;
+    setGuardandoJornada(true);
+    try {
+      await cerrarJornada({
+        operador_id: sesion.usuario.id,
+        resumen: resumenJornada,
+      });
+      mostrarToast("Jornada cerrada", "El resumen de la jornada fue guardado correctamente.", "exito");
+      setCierreJornadaVisible(false);
+      setResumenJornada(null);
+      cargarRutaActiva();
+      cargarRutasOperador();
+    } catch {
+      mostrarToast("Error", "No se pudo guardar el cierre de jornada.", "error");
+    } finally {
+      setGuardandoJornada(false);
+    }
+  }, [resumenJornada, sesion, cargarRutaActiva, cargarRutasOperador]);
 
   if (!sesion) {
     return (
@@ -313,7 +344,9 @@ export default function Home() {
                 <PanelRutaOperador
                   ruta={rutaActiva}
                   contenedores={contenedoresVisibles}
+                  rutasDelDia={[...rutasActivasOperador, ...rutasCompletadasOperador]}
                   onRutaCompletada={() => { cargarRutaActiva(); cargarRutasOperador(); }}
+                  onCerrarJornada={handleCerrarJornada}
                   modoLectura={modoLectura}
                 />
               ) : (
@@ -424,6 +457,15 @@ export default function Home() {
 
       {modalAbierto && (
         <NuevoContenedorModal onCerrar={() => setModalAbierto(false)} />
+      )}
+
+      {cierreJornadaVisible && resumenJornada && (
+        <CierreJornadaModal
+          resumen={resumenJornada}
+          onConfirmar={handleConfirmarCierre}
+          onCancelar={() => { setCierreJornadaVisible(false); setResumenJornada(null); }}
+          guardando={guardandoJornada}
+        />
       )}
     </div>
   );

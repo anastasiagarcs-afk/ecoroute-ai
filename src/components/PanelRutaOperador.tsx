@@ -4,12 +4,15 @@ import { useState, useCallback } from "react";
 import { vaciarContenedor, vaciarContenedoresLote } from "@/lib/contenedoresStore";
 import { marcarRutaCompletada, cancelarRuta as cancelarRutaService } from "@/lib/operadoresService";
 import { registrarRutaEjecutada } from "@/lib/historialRutas";
+import { calcularResumenJornada, type ResumenJornada } from "@/lib/jornadaService";
 import type { Contenedor, Ruta } from "@/types/schema";
 
 interface PanelRutaOperadorProps {
   ruta: Ruta;
   contenedores: Contenedor[];
+  rutasDelDia?: Ruta[];
   onRutaCompletada?: () => void;
+  onCerrarJornada?: (resumen: ResumenJornada) => void;
   modoLectura?: boolean;
 }
 
@@ -21,7 +24,9 @@ function formatearDistancia(km: number | null): string {
 export default function PanelRutaOperador({
   ruta,
   contenedores,
+  rutasDelDia = [],
   onRutaCompletada,
+  onCerrarJornada,
   modoLectura = false,
 }: PanelRutaOperadorProps) {
   const [contenedoresVaciados, setContenedoresVaciados] = useState<Set<string>>(
@@ -147,6 +152,15 @@ export default function PanelRutaOperador({
       setGuardando(false);
     }
   }, [guardando, ruta, contenedoresRuta, onRutaCompletada]);
+
+  const handleCerrarJornada = useCallback(() => {
+    const resumen = calcularResumenJornada(rutasDelDia, contenedores);
+    onCerrarJornada?.(resumen);
+  }, [rutasDelDia, contenedores, onCerrarJornada]);
+
+  const hayTrabajoDelDia = rutasDelDia.some(
+    (r) => r.estado === "completada" || r.estado === "cancelada"
+  );
 
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
@@ -292,6 +306,17 @@ export default function PanelRutaOperador({
           </button>
         )}
       </div>
+
+      {!modoLectura && hayTrabajoDelDia && onCerrarJornada && (
+        <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-800">
+          <button
+            onClick={handleCerrarJornada}
+            className="w-full rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-700/40 dark:bg-amber-900/20 dark:text-amber-400 dark:hover:bg-amber-900/30"
+          >
+            Cerrar Jornada
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { obtenerHistorialOperador } from "@/lib/operadoresService";
+import { obtenerResumenesJornada, type ResumenJornadaGuardado } from "@/lib/jornadaService";
 import type { Ruta } from "@/types/schema";
 
 interface HistorialOperadorProps {
@@ -18,15 +19,32 @@ function formatearFecha(fecha: string): string {
   });
 }
 
+function formatearTiempo(iso: string | null): string {
+  if (!iso) return "—";
+  const match = /^PT(?:(\d+)H)?(?:(\d+)M)?/.exec(iso);
+  if (!match) return iso;
+  const horas = Number(match[1] ?? 0);
+  const mins = Number(match[2] ?? 0);
+  if (horas === 0 && mins === 0) return "—";
+  if (horas === 0) return `${mins} min`;
+  if (mins === 0) return `${horas}h`;
+  return `${horas}h ${mins} min`;
+}
+
 export default function HistorialOperador({
   operadorId,
 }: HistorialOperadorProps) {
   const [rutas, setRutas] = useState<Ruta[]>([]);
+  const [jornadas, setJornadas] = useState<ResumenJornadaGuardado[]>([]);
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
-    obtenerHistorialOperador(operadorId).then((data) => {
-      setRutas(data);
+    Promise.all([
+      obtenerHistorialOperador(operadorId),
+      obtenerResumenesJornada(operadorId),
+    ]).then(([rutasData, jornadasData]) => {
+      setRutas(rutasData);
+      setJornadas(jornadasData);
       setCargando(false);
     });
   }, [operadorId]);
@@ -41,7 +59,7 @@ export default function HistorialOperador({
     );
   }
 
-  if (rutas.length === 0) {
+  if (rutas.length === 0 && jornadas.length === 0) {
     return (
       <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
         <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
@@ -62,6 +80,43 @@ export default function HistorialOperador({
           ({rutas.length} ruta{rutas.length !== 1 ? "s" : ""})
         </span>
       </h3>
+
+      {jornadas.length > 0 && (
+        <div className="mt-3">
+          <h4 className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            Jornadas Cerradas
+          </h4>
+          <ul className="space-y-2">
+            {jornadas.map((j) => (
+              <li
+                key={j.id}
+                className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-800/40 dark:bg-amber-900/20"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-xs font-medium text-amber-800 dark:text-amber-300">
+                      Jornada del día
+                    </p>
+                    <p className="mt-0.5 text-[10px] text-amber-600/80 dark:text-amber-400/70">
+                      {j.rutasEjecutadas} ruta{j.rutasEjecutadas !== 1 ? "s" : ""} ·{" "}
+                      {j.kmTotales.toFixed(1)} km ·{" "}
+                      {formatearTiempo(j.tiempoReal)}
+                      {j.combustibleConsumido != null &&
+                        ` · ${j.combustibleConsumido.toFixed(1)} L`}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-[10px] text-amber-600/70 dark:text-amber-400/60">
+                    {formatearFecha(j.fecha_ejecucion)}
+                  </span>
+                </div>
+                <span className="mt-1 inline-block rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-medium text-amber-800 dark:bg-amber-800/40 dark:text-amber-300">
+                  Jornada Cerrada
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <ul className="mt-3 space-y-2">
         {rutas.map((ruta) => (
