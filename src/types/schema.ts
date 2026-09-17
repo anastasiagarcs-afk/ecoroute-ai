@@ -39,7 +39,8 @@ export type EstadoRuta =
   | "rechazada"
   | "en_progreso"
   | "completada"
-  | "cancelada";
+  | "cancelada"
+  | "finalizada_incompleta";
 
 export type MaterialReciclaje =
   | "organico"

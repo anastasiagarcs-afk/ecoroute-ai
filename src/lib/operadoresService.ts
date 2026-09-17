@@ -280,3 +280,23 @@ export async function marcarRutaCompletada(rutaId: string): Promise<void> {
     throw new Error("No se pudo marcar la ruta como completada");
   }
 }
+
+export async function marcarRutaFinalizadaIncompleta(rutaId: string): Promise<void> {
+  if (!estaSupabaseConfigurado()) {
+    throw new Error("Supabase no está configurado");
+  }
+
+  const supabase = getSupabaseClient();
+  const { error } = await supabase
+    .from("Rutas")
+    .update({
+      estado: "finalizada_incompleta" as EstadoRuta,
+      ultima_ejecucion: new Date().toISOString(),
+    } as UpdateRuta)
+    .eq("id", rutaId);
+
+  if (error) {
+    console.error("Error al marcar ruta como finalizada incompleta:", JSON.stringify(error, null, 2));
+    throw new Error("No se pudo marcar la ruta como finalizada incompleta");
+  }
+}

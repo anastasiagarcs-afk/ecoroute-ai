@@ -158,10 +158,6 @@ export default function PanelRutaOperador({
     onCerrarJornada?.(resumen);
   }, [rutasDelDia, contenedores, onCerrarJornada]);
 
-  const hayTrabajoDelDia = rutasDelDia.some(
-    (r) => r.estado === "completada" || r.estado === "cancelada"
-  );
-
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
       <div className="flex items-start justify-between gap-3">
@@ -307,7 +303,7 @@ export default function PanelRutaOperador({
         )}
       </div>
 
-      {!modoLectura && hayTrabajoDelDia && onCerrarJornada && (
+      {!modoLectura && onCerrarJornada && (
         <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-800">
           <button
             onClick={handleCerrarJornada}

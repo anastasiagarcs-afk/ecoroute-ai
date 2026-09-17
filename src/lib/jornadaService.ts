@@ -3,21 +3,27 @@ import {
   getSupabaseClient,
 } from "@/lib/supabaseClient";
 import { aIntervalo } from "@/lib/historialRutas";
+import { marcarRutaFinalizadaIncompleta } from "@/lib/operadoresService";
 import type { Contenedor, HistorialRuta, InsertHistorialRuta, Ruta } from "@/types/schema";
+
+export interface DetalleRutaJornada {
+  nombre: string;
+  rutaId: string;
+  distanciaKm: number;
+  contenedoresCount: number;
+  fecha: string;
+  estado: string;
+}
 
 export interface ResumenJornada {
   fecha: string;
   rutasEjecutadas: number;
+  rutasEnProceso: number;
   kmTotales: number;
   contenedoresVaciados: number;
   tiempoTotalMinutos: number;
   combustibleEstimadoLitros: number;
-  rutas: {
-    nombre: string;
-    distanciaKm: number;
-    contenedoresCount: number;
-    fecha: string;
-  }[];
+  rutas: DetalleRutaJornada[];
 }
 
 const CONSUMO_COMBUSTIBLE_POR_KM = 0.12;
@@ -40,6 +46,8 @@ function parsearTiempoEstimado(tiempo: string | null): number {
   return horas * 60 + mins;
 }
 
+const ESTADOS_FINALES = new Set(["completada", "cancelada", "finalizada_incompleta"]);
+
 export function calcularResumenJornada(
   rutas: Ruta[],
   _contenedores: Contenedor[]
@@ -47,17 +55,17 @@ export function calcularResumenJornada(
   const hoy = new Date();
 
   const rutasDelDia = rutas.filter(
-    (r) =>
-      (r.estado === "completada" || r.estado === "cancelada") &&
-      r.ultima_ejecucion &&
-      esMismaFecha(r.ultima_ejecucion, hoy)
+    (r) => r.ultima_ejecucion && esMismaFecha(r.ultima_ejecucion, hoy)
   );
 
   let kmTotales = 0;
   let tiempoTotalMinutos = 0;
   const contenedoresSet = new Set<string>();
 
-  const detalleRutas: ResumenJornada["rutas"] = [];
+  let rutasEjecutadas = 0;
+  let rutasEnProceso = 0;
+
+  const detalleRutas: DetalleRutaJornada[] = [];
 
   for (const ruta of rutasDelDia) {
     const km = ruta.distancia_total ?? 0;
@@ -70,11 +78,19 @@ export function calcularResumenJornada(
       contenedoresSet.add(cid);
     }
 
+    if (ESTADOS_FINALES.has(ruta.estado)) {
+      rutasEjecutadas++;
+    } else {
+      rutasEnProceso++;
+    }
+
     detalleRutas.push({
       nombre: ruta.nombre,
+      rutaId: ruta.id,
       distanciaKm: Math.round(km * 100) / 100,
       contenedoresCount: (ruta.contenedores_asignados ?? []).length,
       fecha: ruta.ultima_ejecucion ?? ruta.fecha_creacion,
+      estado: ruta.estado,
     });
   }
 
@@ -83,7 +99,8 @@ export function calcularResumenJornada(
 
   return {
     fecha: hoy.toISOString(),
-    rutasEjecutadas: rutasDelDia.length,
+    rutasEjecutadas,
+    rutasEnProceso,
     kmTotales: Math.round(kmTotales * 100) / 100,
     contenedoresVaciados: contenedoresSet.size,
     tiempoTotalMinutos: Math.round(tiempoTotalMinutos),
@@ -108,16 +125,19 @@ export async function cerrarJornada(datos: {
   const observaciones = JSON.stringify({
     tipo: "cierre_jornada",
     rutasEjecutadas: resumen.rutasEjecutadas,
+    rutasEnProceso: resumen.rutasEnProceso,
     combustibleEstimado: resumen.combustibleEstimadoLitros,
   });
+
+  const contenedoresRecogidos = resumen.rutas
+    .filter((r) => r.estado === "completada")
+    .flatMap((r) => Array(r.contenedoresCount).fill(""));
 
   const valores: InsertHistorialRuta = {
     ruta_id: null,
     operador_id,
     fecha_ejecucion: resumen.fecha,
-    contenedores_recogidos: resumen.rutas.flatMap((r) => {
-      return [];
-    }),
+    contenedores_recogidos: contenedoresRecogidos,
     tiempo_real: aIntervalo(resumen.tiempoTotalMinutos),
     combustible_consumido: resumen.combustibleEstimadoLitros,
     distancia_total: resumen.kmTotales,
@@ -145,6 +165,19 @@ export async function cerrarJornada(datos: {
       "[EcoRoute] Excepción al cerrar jornada:",
       error instanceof Error ? error.message : error
     );
+  }
+
+  for (const ruta of resumen.rutas) {
+    if (!ESTADOS_FINALES.has(ruta.estado)) {
+      try {
+        await marcarRutaFinalizadaIncompleta(ruta.rutaId);
+      } catch (err) {
+        console.warn(
+          `[EcoRoute] No se pudo marcar ruta ${ruta.rutaId} como finalizada incompleta:`,
+          err instanceof Error ? err.message : err
+        );
+      }
+    }
   }
 }
 
