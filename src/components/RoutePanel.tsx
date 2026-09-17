@@ -124,6 +124,7 @@ export default function RoutePanel({
   );
   const puedeEditar = sesion ? puede(sesion.rol, "editar_contenedor") : false;
   const puedeEliminar = sesion ? puede(sesion.rol, "eliminar_contenedor") : false;
+  const puedeVaciar = sesion && (sesion.rol === "Admin" || sesion.rol === "Operador");
 
   useEffect(() => {
     listarOperadores().then(setOperadores);
@@ -440,15 +441,17 @@ export default function RoutePanel({
                       </div>
                     </div>
                     <div className="mt-2 flex gap-1.5">
-                      <button
-                        type="button"
-                        disabled={esVacio || vaciandoId === contenedor.id}
-                        title="Vaciar contenedor (0% y Vacío/Disponible)"
-                        onClick={() => manejarVaciarContenedor(contenedor.id)}
-                        className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {vaciandoId === contenedor.id ? "Vaciando…" : "Vaciar"}
-                      </button>
+                      {puedeVaciar && (
+                        <button
+                          type="button"
+                          disabled={esVacio || vaciandoId === contenedor.id}
+                          title="Vaciar contenedor (0% y Vacío/Disponible)"
+                          onClick={() => manejarVaciarContenedor(contenedor.id)}
+                          className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {vaciandoId === contenedor.id ? "Vaciando…" : "Vaciar"}
+                        </button>
+                      )}
                       {puedeEditar && (
                         <button
                           type="button"
@@ -727,7 +730,7 @@ export default function RoutePanel({
                 {mostrarHistorial ? "▲" : "▼"}
               </span>
             </button>
-            {historial.length > 0 && (
+            {historial.length > 0 && puedeVaciar && (
               <button
                 onClick={manejarVaciarHistorial}
                 disabled={estadoHistorial.estadoCarga === "cargando"}

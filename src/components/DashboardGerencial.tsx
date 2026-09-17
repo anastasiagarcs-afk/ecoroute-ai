@@ -3,9 +3,6 @@
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { useContenedores } from "@/hooks/useContenedores";
 import {
-  vaciarContenedor,
-} from "@/lib/contenedoresStore";
-import {
   obtenerSnapshotHistorial,
   obtenerSnapshotServidorHistorial,
   suscribirseAlHistorial,
@@ -227,23 +224,6 @@ export default function DashboardGerencial() {
   );
   const rangoFechas = fechaDesde || fechaHasta ? `${fechaDesde || "inicio"} – ${fechaHasta || "hoy"}` : "Todo el historial";
 
-  const atenderContenedor = async (contenedor: Contenedor) => {
-    try {
-      await vaciarContenedor(contenedor.id);
-      mostrarToast(
-        "Contenedor atendido",
-        `${contenedor.numero_identificacion} vaciado al 0%.`,
-        "exito"
-      );
-    } catch (error) {
-      mostrarToast(
-        "No se pudo vaciar el contenedor",
-        error instanceof Error ? error.message : "Inténtalo de nuevo.",
-        "error"
-      );
-    }
-  };
-
   if (sesion && !puede(sesion.rol, "ver_dashboard")) {
     return (
       <section className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center dark:border-amber-800 dark:bg-amber-950">
@@ -464,6 +444,60 @@ export default function DashboardGerencial() {
       </div>
 
       <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+            Contenedores críticos (&gt; 80%)
+          </h3>
+          <span className="rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20 dark:bg-red-500/10 dark:text-red-400">
+            {criticos.length}
+          </span>
+        </div>
+        {criticos.length === 0 ? (
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            Sin contenedores críticos.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+                <tr>
+                  <th className="py-2 pr-3 font-semibold">Código</th>
+                  <th className="py-2 pr-3 font-semibold">Zona</th>
+                  <th className="py-2 pr-3 font-semibold">Tipo</th>
+                  <th className="py-2 pr-3 font-semibold">Nivel</th>
+                  <th className="py-2 font-semibold">Estado</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                {criticos.map((contenedor) => (
+                  <tr key={contenedor.id}>
+                    <td className="py-2 pr-3 font-medium text-zinc-900 dark:text-zinc-50">
+                      {contenedor.numero_identificacion}
+                    </td>
+                    <td className="py-2 pr-3 text-zinc-600 dark:text-zinc-300">
+                      {contenedor.zona ?? "—"}
+                    </td>
+                    <td className="py-2 pr-3 text-zinc-600 dark:text-zinc-300">
+                      {ETIQUETAS_TIPO_RESIDUO[contenedor.tipo_residuo] ?? contenedor.tipo_residuo}
+                    </td>
+                    <td className="py-2 pr-3">
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="h-2.5 w-2.5 rounded-full bg-red-600" />
+                        {contenedor.nivel_llenado}%
+                      </span>
+                    </td>
+                    <td className="py-2 text-zinc-600 dark:text-zinc-300">
+                      {contenedor.estado}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         <h3 className="mb-3 text-sm font-semibold text-zinc-900 dark:text-zinc-50">
           Estado de llenado por zona
         </h3>
@@ -519,70 +553,6 @@ export default function DashboardGerencial() {
                 </div>
               </div>
             ))}
-          </div>
-        )}
-      </div>
-
-      <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-            Contenedores críticos (&gt; 80%)
-          </h3>
-          <span className="rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20 dark:bg-red-500/10 dark:text-red-400">
-            {criticos.length}
-          </span>
-        </div>
-        {criticos.length === 0 ? (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            Sin contenedores críticos.
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-                <tr>
-                  <th className="py-2 pr-3 font-semibold">Código</th>
-                  <th className="py-2 pr-3 font-semibold">Zona</th>
-                  <th className="py-2 pr-3 font-semibold">Tipo</th>
-                  <th className="py-2 pr-3 font-semibold">Nivel</th>
-                  <th className="py-2 pr-3 font-semibold">Estado</th>
-                  <th className="py-2 font-semibold">Acción</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                {criticos.map((contenedor) => (
-                  <tr key={contenedor.id}>
-                    <td className="py-2 pr-3 font-medium text-zinc-900 dark:text-zinc-50">
-                      {contenedor.numero_identificacion}
-                    </td>
-                    <td className="py-2 pr-3 text-zinc-600 dark:text-zinc-300">
-                      {contenedor.zona ?? "—"}
-                    </td>
-                    <td className="py-2 pr-3 text-zinc-600 dark:text-zinc-300">
-                      {ETIQUETAS_TIPO_RESIDUO[contenedor.tipo_residuo] ?? contenedor.tipo_residuo}
-                    </td>
-                    <td className="py-2 pr-3">
-                      <span className="inline-flex items-center gap-1.5">
-                        <span className="h-2.5 w-2.5 rounded-full bg-red-600" />
-                        {contenedor.nivel_llenado}%
-                      </span>
-                    </td>
-                    <td className="py-2 pr-3 text-zinc-600 dark:text-zinc-300">
-                      {contenedor.estado}
-                    </td>
-                    <td className="py-2">
-                      <button
-                        type="button"
-                        onClick={() => void atenderContenedor(contenedor)}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-700"
-                      >
-                        Atender / Vaciar
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         )}
       </div>
