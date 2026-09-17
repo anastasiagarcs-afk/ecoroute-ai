@@ -275,7 +275,7 @@ export default function RoutePanel({
         distancia_total: Math.round(ruta.distanciaTotalKm * 100) / 100,
         tiempo_estimado: `${Math.round(ruta.tiempoEstimadoMin)} min`,
         operador_asignado: operadorSeleccionado || null,
-        estado: "pendiente",
+        estado: operadorSeleccionado ? "en_progreso" : "pendiente",
         geometria: ruta.geometria,
       });
 

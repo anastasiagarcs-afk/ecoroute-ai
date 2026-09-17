@@ -14,8 +14,8 @@ import { useContenedores } from "@/hooks/useContenedores";
 import { estaSupabaseConfigurado } from "@/lib/supabaseClient";
 import { obtenerSnapshotSesion } from "@/lib/authService";
 import { puede } from "@/lib/rolesAutorizados";
-import { obtenerRutaActivaOperador, obtenerRutasActivasOperador, obtenerHistorialOperador } from "@/lib/operadoresService";
-import { cerrarJornada, type ResumenJornada } from "@/lib/jornadaService";
+import { obtenerRutasActivasOperador, marcarRutaEnProgreso } from "@/lib/operadoresService";
+import { cerrarJornada, calcularResumenJornada, type ResumenJornada } from "@/lib/jornadaService";
 import { mostrarToast } from "@/lib/toastStore";
 import type { Ruta, UbicacionPunto } from "@/types/schema";
 
@@ -25,12 +25,9 @@ const CENTRO_CIUDAD: UbicacionPunto = { lat: 8.34739, lng: -62.65371 };
 
 export default function Home() {
   const [modalAbierto, setModalAbierto] = useState(false);
-  const [rutaActiva, setRutaActiva] = useState<Ruta | null>(null);
+  const [rutaSeleccionadaId, setRutaSeleccionadaId] = useState<string | null>(null);
   const [tabOperador, setTabOperador] = useState<"rutas" | "historial">("rutas");
-  const [subTabOperador, setSubTabOperador] = useState<"activas" | "completadas">("activas");
   const [rutasActivasOperador, setRutasActivasOperador] = useState<Ruta[]>([]);
-  const [rutasCompletadasOperador, setRutasCompletadasOperador] = useState<Ruta[]>([]);
-  const [modoLectura, setModoLectura] = useState(false);
   const [cierreJornadaVisible, setCierreJornadaVisible] = useState(false);
   const [resumenJornada, setResumenJornada] = useState<ResumenJornada | null>(null);
   const [guardandoJornada, setGuardandoJornada] = useState(false);
@@ -43,43 +40,34 @@ export default function Home() {
     () => null
   );
 
+  const rutaSeleccionada = rutaSeleccionadaId
+    ? rutasActivasOperador.find((r) => r.id === rutaSeleccionadaId) ?? null
+    : null;
+
+  const handleSeleccionarRuta = useCallback(
+    async (ruta: Ruta) => {
+      await marcarRutaEnProgreso(ruta.id);
+      setRutaSeleccionadaId(ruta.id);
+    },
+    []
+  );
+
+  const handleCerrarPanel = useCallback(() => {
+    setRutaSeleccionadaId(null);
+  }, []);
+
   const cargarRutasOperador = useCallback(async () => {
     if (sesion?.rol !== "Operador" || !sesion.usuario?.id) return;
-    const [activas, completadas] = await Promise.all([
-      obtenerRutasActivasOperador(sesion.usuario.id),
-      obtenerHistorialOperador(sesion.usuario.id),
-    ]);
+    const activas = await obtenerRutasActivasOperador(sesion.usuario.id);
+    console.log("[EcoRoute] Rutas activas cargadas:", activas.length);
     setRutasActivasOperador(activas);
-    setRutasCompletadasOperador(completadas);
-  }, [sesion]);
-
-  const cargarRutaActiva = useCallback(() => {
-    if (sesion?.rol === "Operador" && sesion.usuario?.id) {
-      obtenerRutaActivaOperador(sesion.usuario.id).then((ruta) => {
-        const estado = ruta?.estado ?? "pendiente";
-        if (estado === "aceptada" || estado === "en_progreso") {
-          setRutaActiva(ruta);
-          setModoLectura(false);
-        } else {
-          setRutaActiva(null);
-        }
-      });
-    }
   }, [sesion]);
 
   useEffect(() => {
     if (sesion?.rol !== "Operador" || !sesion.usuario?.id) return;
 
-    cargarRutaActiva();
     cargarRutasOperador();
-
-    const handler = () => {
-      cargarRutaActiva();
-      cargarRutasOperador();
-    };
-    window.addEventListener("ecoroute:ruta-aceptada", handler);
-    return () => window.removeEventListener("ecoroute:ruta-aceptada", handler);
-  }, [sesion, cargarRutaActiva, cargarRutasOperador]);
+  }, [sesion, cargarRutasOperador]);
 
   const contenedoresVisibles =
     estadoContenedores.estadoCarga === "cargando" ? [] : contenedores;
@@ -87,10 +75,11 @@ export default function Home() {
   const datosRespaldo =
     !estaSupabaseConfigurado() || estadoContenedores.estadoCarga === "error";
 
-  const handleCerrarJornada = useCallback((resumen: ResumenJornada) => {
+  const handleCerrarJornada = useCallback(() => {
+    const resumen = calcularResumenJornada(rutasActivasOperador, contenedores);
     setResumenJornada(resumen);
     setCierreJornadaVisible(true);
-  }, []);
+  }, [rutasActivasOperador, contenedores]);
 
   const handleConfirmarCierre = useCallback(async () => {
     if (!resumenJornada || !sesion?.usuario?.id) return;
@@ -103,14 +92,14 @@ export default function Home() {
       mostrarToast("Jornada cerrada", "El resumen de la jornada fue guardado correctamente.", "exito");
       setCierreJornadaVisible(false);
       setResumenJornada(null);
-      cargarRutaActiva();
+      setRutaSeleccionadaId(null);
       cargarRutasOperador();
     } catch {
       mostrarToast("Error", "No se pudo guardar el cierre de jornada.", "error");
     } finally {
       setGuardandoJornada(false);
     }
-  }, [resumenJornada, sesion, cargarRutaActiva, cargarRutasOperador]);
+  }, [resumenJornada, sesion, cargarRutasOperador, setRutaSeleccionadaId]);
 
   if (!sesion) {
     return (
@@ -299,7 +288,7 @@ export default function Home() {
       {sesion.rol === "Operador" && (
         <div className="flex items-center gap-2 border-b border-zinc-200 dark:border-zinc-800">
           <button
-            onClick={() => { setTabOperador("rutas"); setRutaActiva(null); setModoLectura(false); }}
+            onClick={() => setTabOperador("rutas")}
             className={`border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
               tabOperador === "rutas"
                 ? "border-emerald-600 text-emerald-700 dark:border-emerald-400 dark:text-emerald-400"
@@ -334,56 +323,56 @@ export default function Home() {
       {puede(sesion.rol, "ver_dashboard") && <DashboardGerencial />}
 
       {sesion.rol === "Operador" ? (
-        <section className="grid w-full grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
-          <div className="relative h-[60vh] w-full overflow-hidden rounded-2xl border border-zinc-200 shadow-sm dark:border-zinc-800 lg:h-[65vh]">
-            <Map
-              contenedores={rutaActiva && tabOperador === "rutas"
-                ? contenedoresVisibles.filter((c) => rutaActiva.contenedores_asignados.includes(c.id))
-                : contenedoresVisibles}
-              centro={CENTRO_CIUDAD}
-              zoom={13}
-              rutaPuntos={rutaActiva && tabOperador === "rutas" ? (rutaActiva.geometria ?? []) : []}
-              paradasRuta={rutaActiva && tabOperador === "rutas" ? (rutaActiva.geometria ?? []) : []}
-              rol={sesion.rol}
-            />
-          </div>
+        <section className={`grid w-full grid-cols-1 items-start gap-4 ${tabOperador === "rutas" ? "lg:grid-cols-[minmax(0,1fr)_380px]" : ""}`}>
+          {tabOperador === "rutas" && (
+            <div className="relative h-[60vh] w-full overflow-hidden rounded-2xl border border-zinc-200 shadow-sm dark:border-zinc-800 lg:h-[65vh]">
+              <Map
+                contenedores={rutaSeleccionada
+                  ? contenedoresVisibles.filter((c) => rutaSeleccionada.contenedores_asignados.includes(c.id))
+                  : contenedoresVisibles}
+                centro={CENTRO_CIUDAD}
+                zoom={13}
+                rutaPuntos={rutaSeleccionada ? (rutaSeleccionada.geometria ?? []) : []}
+                paradasRuta={rutaSeleccionada ? (rutaSeleccionada.geometria ?? []) : []}
+                rol={sesion.rol}
+              />
+            </div>
+          )}
 
           <div className="max-h-[80vh] w-full overflow-y-auto lg:max-h-[65vh]">
               {tabOperador === "rutas" ? (
-                rutaActiva ? (
-                  <PanelRutaOperador
-                    ruta={rutaActiva}
-                    contenedores={contenedoresVisibles}
-                    onRutaCompletada={() => { cargarRutaActiva(); cargarRutasOperador(); }}
-                    modoLectura={modoLectura}
-                  />
-              ) : (
-                <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-                  <div className="mb-3 flex gap-1 border-b border-zinc-100 dark:border-zinc-800">
-                    <button
-                      onClick={() => setSubTabOperador("activas")}
-                      className={`flex-1 border-b-2 px-3 py-1.5 text-xs font-medium transition-colors ${
-                        subTabOperador === "activas"
-                          ? "border-emerald-600 text-emerald-700 dark:border-emerald-400 dark:text-emerald-400"
-                          : "border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400"
-                      }`}
-                    >
+                <>
+                  {rutaSeleccionada ? (
+                    <PanelRutaOperador
+                      ruta={rutaSeleccionada}
+                      contenedores={contenedoresVisibles}
+                      onRutaCompletada={() => {
+                        console.log(
+                          "[EcoRoute] Ruta completada, actualizando estado local",
+                          rutaSeleccionada?.id
+                        );
+                        if (rutaSeleccionada) {
+                          setRutasActivasOperador((prev) =>
+                            prev.filter((r) => r.id !== rutaSeleccionada.id)
+                          );
+                        }
+                        setRutaSeleccionadaId(null);
+                        void cargarRutasOperador();
+                      }}
+                      onCerrar={handleCerrarPanel}
+                    />
+                  ) : (
+                    <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900 text-center">
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                        Ninguna ruta seleccionada. Presiona "Continuar Ruta" en el panel inferior para cargar el itinerario.
+                      </p>
+                    </div>
+                  )}
+                  <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+                    <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                       En Progreso ({rutasActivasOperador.length})
-                    </button>
-                    <button
-                      onClick={() => setSubTabOperador("completadas")}
-                      className={`flex-1 border-b-2 px-3 py-1.5 text-xs font-medium transition-colors ${
-                        subTabOperador === "completadas"
-                          ? "border-emerald-600 text-emerald-700 dark:border-emerald-400 dark:text-emerald-400"
-                          : "border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400"
-                      }`}
-                    >
-                      Completadas ({rutasCompletadasOperador.length})
-                    </button>
-                  </div>
-
-                  {subTabOperador === "activas" ? (
-                    rutasActivasOperador.length === 0 ? (
+                    </h4>
+                    {rutasActivasOperador.length === 0 ? (
                       <p className="py-6 text-center text-xs text-zinc-500 dark:text-zinc-400">
                         No tienes rutas activas. Espera una asignacion desde la campana de notificaciones.
                       </p>
@@ -408,7 +397,7 @@ export default function Home() {
                                 </span>
                               </div>
                               <button
-                                onClick={() => { setRutaActiva(ruta); setModoLectura(false); }}
+                                onClick={() => handleSeleccionarRuta(ruta)}
                                 className="shrink-0 rounded-lg bg-emerald-600 px-2.5 py-1 text-[10px] font-semibold text-white transition-colors hover:bg-emerald-700"
                               >
                                 Continuar Ruta
@@ -417,41 +406,9 @@ export default function Home() {
                           </li>
                         ))}
                       </ul>
-                    )
-                  ) : (
-                    rutasCompletadasOperador.length === 0 ? (
-                      <p className="py-6 text-center text-xs text-zinc-500 dark:text-zinc-400">
-                        No tienes rutas completadas aun.
-                      </p>
-                    ) : (
-                      <ul className="space-y-2">
-                        {rutasCompletadasOperador.map((ruta) => (
-                          <li key={ruta.id} className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="min-w-0">
-                                <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">{ruta.nombre}</p>
-                                <p className="mt-0.5 text-[10px] text-zinc-500 dark:text-zinc-400">
-                                  {ruta.contenedores_asignados.length} contenedores · {ruta.ultima_ejecucion ? new Date(ruta.ultima_ejecucion).toLocaleDateString() : "—"}
-                                </p>
-                                <span className="mt-1 inline-block rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                                  Completada
-                                </span>
-                              </div>
-                              <button
-                                onClick={() => { setRutaActiva(ruta); setModoLectura(true); }}
-                                disabled={!Array.isArray(ruta.geometria) || (ruta.geometria?.length ?? 0) < 2}
-                                className="shrink-0 rounded-lg border border-zinc-300 bg-white px-2.5 py-1 text-[10px] font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
-                              >
-                                Ver en Mapa
-                              </button>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    )
-                  )}
-                </div>
-              )
+                    )}
+                  </div>
+              </>
             ) : (
               <HistorialOperador operadorId={sesion.usuario.id} />
             )}

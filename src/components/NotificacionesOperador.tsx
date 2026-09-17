@@ -5,12 +5,10 @@ import {
   estaSupabaseConfigurado,
   getSupabaseClient,
 } from "@/lib/supabaseClient";
-import { aceptarRuta, rechazarRuta } from "@/lib/operadoresService";
 import type { Database, Notificacion } from "@/types/schema";
 
 interface NotificacionesOperadorProps {
   usuarioId: string;
-  onRutaAceptada?: () => void;
 }
 
 function formatearFecha(fecha: string): string {
@@ -29,11 +27,9 @@ function formatearFecha(fecha: string): string {
 
 export default function NotificacionesOperador({
   usuarioId,
-  onRutaAceptada,
 }: NotificacionesOperadorProps) {
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const [cargando, setCargando] = useState(true);
-  const [accionandoId, setAccionandoId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!estaSupabaseConfigurado()) {
@@ -68,43 +64,6 @@ export default function NotificacionesOperador({
     );
   }, []);
 
-  const handleAceptar = useCallback(
-    async (notif: Notificacion) => {
-      const rutaId = notif.enlace;
-      if (!rutaId) return;
-
-      setAccionandoId(notif.id);
-      try {
-        await aceptarRuta(rutaId);
-        await marcarLeida(notif.id);
-        onRutaAceptada?.();
-      } catch (err) {
-        console.error("Error al aceptar ruta:", err);
-      } finally {
-        setAccionandoId(null);
-      }
-    },
-    [marcarLeida, onRutaAceptada]
-  );
-
-  const handleRechazar = useCallback(
-    async (notif: Notificacion) => {
-      const rutaId = notif.enlace;
-      if (!rutaId) return;
-
-      setAccionandoId(notif.id);
-      try {
-        await rechazarRuta(rutaId);
-        await marcarLeida(notif.id);
-      } catch (err) {
-        console.error("Error al rechazar ruta:", err);
-      } finally {
-        setAccionandoId(null);
-      }
-    },
-    [marcarLeida]
-  );
-
   if (cargando) {
     return (
       <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
@@ -137,7 +96,6 @@ export default function NotificacionesOperador({
       <ul className="mt-3 space-y-2">
         {notificaciones.map((notif) => {
           const esAsignacion = notif.tipo === "asignacion_ruta";
-          const estaAccionando = accionandoId === notif.id;
 
           return (
             <li
@@ -157,26 +115,7 @@ export default function NotificacionesOperador({
                 </span>
               </div>
 
-              {esAsignacion && !notif.leida && (
-                <div className="mt-2 flex gap-2">
-                  <button
-                    onClick={() => handleAceptar(notif)}
-                    disabled={estaAccionando}
-                    className="rounded-lg bg-emerald-600 px-3 py-1 text-[10px] font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
-                  >
-                    {estaAccionando ? "Procesando…" : "Aceptar Ruta"}
-                  </button>
-                  <button
-                    onClick={() => handleRechazar(notif)}
-                    disabled={estaAccionando}
-                    className="rounded-lg bg-zinc-200 px-3 py-1 text-[10px] font-semibold text-zinc-700 transition-colors hover:bg-zinc-300 disabled:opacity-50 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600"
-                  >
-                    {estaAccionando ? "Procesando…" : "Rechazar"}
-                  </button>
-                </div>
-              )}
-
-              {!esAsignacion && !notif.leida && (
+              {!notif.leida && !esAsignacion && (
                 <button
                   onClick={() => marcarLeida(notif.id)}
                   className="mt-1 text-[10px] font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"

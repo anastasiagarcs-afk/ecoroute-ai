@@ -6,7 +6,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { obtenerSnapshotSesion, cerrarSesion } from "@/lib/authService";
 import { puede, ETIQUETAS_ROL } from "@/lib/rolesAutorizados";
 import { estaSupabaseConfigurado, getSupabaseClient } from "@/lib/supabaseClient";
-import { aceptarRuta, rechazarRuta } from "@/lib/operadoresService";
 import type { AccionSistema } from "@/lib/rolesAutorizados";
 import type { RolUsuario, Notificacion } from "@/types/schema";
 
@@ -61,7 +60,6 @@ export default function NavRol() {
 
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const [popoverAbierto, setPopoverAbierto] = useState(false);
-  const [procesandoId, setProcesandoId] = useState<string | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -135,7 +133,7 @@ export default function NavRol() {
 
   const handleAceptarRuta = useCallback(async (notif: Notificacion) => {
     let enlaceRuta = notif.enlace;
-
+ 
     // Fallback: buscar ruta pendiente en Supabase si el enlace no viene en la notificación
     if (!enlaceRuta && sesion?.usuario?.id) {
       const supabase = getSupabaseClient();
@@ -147,7 +145,7 @@ export default function NavRol() {
         .order("fecha_creacion", { ascending: false })
         .limit(1)
         .maybeSingle();
-
+ 
       if (error) {
         console.error("Error en fallback de ruta:", error.message);
         return;
@@ -156,11 +154,12 @@ export default function NavRol() {
         enlaceRuta = data.id;
       }
     }
-
+ 
     if (!enlaceRuta || procesandoId) return;
     setProcesandoId(notif.id);
     try {
       await aceptarRuta(enlaceRuta);
+      await registrarHistorialAccionRuta(sesion.usuario.id, enlaceRuta, "aceptada");
       await marcarLeida(notif.id);
       window.dispatchEvent(
         new CustomEvent("ecoroute:ruta-aceptada", {
@@ -173,21 +172,7 @@ export default function NavRol() {
     } finally {
       setProcesandoId(null);
     }
-  }, [marcarLeida, sesion, procesandoId]);
-
-  const handleRechazarRuta = useCallback(async (notif: Notificacion) => {
-    if (!notif.enlace || procesandoId) return;
-    setProcesandoId(notif.id);
-    try {
-      await rechazarRuta(notif.enlace);
-      await marcarLeida(notif.id);
-      setPopoverAbierto(false);
-    } catch (err) {
-      console.error("Error al rechazar ruta:", err);
-    } finally {
-      setProcesandoId(null);
-    }
-  }, [marcarLeida, procesandoId]);
+  }, []);
 
   if (!sesion) return null;
 
@@ -304,7 +289,6 @@ export default function NavRol() {
                   <ul>
                     {notificaciones.map((notif) => {
                       const esAsignacion = notif.tipo === "asignacion_ruta";
-                      const estaProcesando = procesandoId === notif.id;
 
                       return (
                         <li
@@ -349,25 +333,6 @@ export default function NavRol() {
                               </button>
                             )}
                           </div>
-
-                          {esAsignacion && (
-                            <div className="mt-2 flex gap-2">
-                              <button
-                                onClick={() => handleAceptarRuta(notif)}
-                                disabled={estaProcesando}
-                                className="rounded-lg bg-emerald-600 px-3 py-1 text-[10px] font-semibold text-white transition-colors hover:bg-emerald-500 disabled:opacity-50"
-                              >
-                                {estaProcesando ? "Procesando…" : "Aceptar Ruta"}
-                              </button>
-                              <button
-                                onClick={() => handleRechazarRuta(notif)}
-                                disabled={estaProcesando}
-                                className="rounded-lg bg-red-600/20 px-3 py-1 text-[10px] font-semibold text-red-400 transition-colors hover:bg-red-600 hover:text-white disabled:opacity-50"
-                              >
-                                Rechazar
-                              </button>
-                            </div>
-                          )}
                         </li>
                       );
                     })}

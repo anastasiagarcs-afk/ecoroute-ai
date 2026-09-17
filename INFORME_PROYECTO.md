@@ -443,7 +443,7 @@ erDiagram
 | --- | --- | --- |
 | **`Contenedores`** | `id` (PK), `numero_identificacion` (UNIQUE, NOT NULL), `ubicacion` (`geography(Point,4326)`), `capacidad` (`check > 0`), `nivel_llenado` (`numeric(5,2)`, `check 0..100`), `tipo_residuo` (enum), `estado` (enum), `ultima_lectura`, `zona`, `created_at` |
 | **`LecturasSensores`** | `id` (PK), `contenedor_id` (FK → `Contenedores`, `ON DELETE CASCADE`), `nivel_llenado` (`check 0..100`), `temperatura`, `fecha_hora`, `bateria` (`check 0..100`) |
-| **`Rutas`** | `id` (PK), `nombre`, `zona`, `contenedores_asignados` (`uuid[]`), `fecha_creacion`, `ultima_ejecucion`, `distancia_total` (`check >= 0`), `tiempo_estimado` (`interval`) |
+| **`Rutas`** | `id` (PK), `nombre`, `zona`, `contenedores_asignados` (`uuid[]`), `fecha_creacion`, `ultima_ejecucion`, `distancia_total` (`check >= 0`), `tiempo_estimado` (`interva   l`) |
 | **`Usuarios`** | `id` (PK), `nombre`, `email` (UNIQUE), `rol` (enum `Admin/Operador/Ciudadano`), `telefono`, `zona_asignada`, `puntos_reciclaje` (`check >= 0`) |
 | **`PuntosReciclaje`** | `id` (PK), `usuario_id` (FK → `Usuarios`, CASCADE), `contenedor_id` (FK → `Contenedores`, `ON DELETE SET NULL`, agregado en migración 04), `fecha`, `material` (enum), `cantidad` (`check >= 0`), `puntos_ganados`, `validado_por` |
 | **`HistorialRutas`** | `id` (PK), `ruta_id` (FK → `Rutas`, `SET NULL`), `fecha_ejecucion`, `contenedores_recogidos` (`uuid[]`), `tiempo_real` (`interval`), `combustible_consumido`, `distancia_total` y `geometria` (`jsonb`) agregados en migración 02, `observaciones` |
@@ -630,7 +630,7 @@ Subir el video explicativo de la funcionalidad del proyecto a **Google Drive** c
 | Sprint | Alcance | Estado |
 | --- | --- | --- |
 | Sprint 1 | Base de datos (schema + migraciones), mapas y monitoreo de contenedores | ✅ Completado |
-| Sprint 2 | Optimización de rutas (OSRM), historial y persistencia en Supabase | ✅ Completado |
+| Sprint 2 | Optimización de rutas (OSRM), historial y persistencia en Supabase | ✅ Completado |   
 | Sprint 3 | Separación en la fuente, registro de reciclaje, gamificación y dashboard gerencial | ✅ Completado |
 | Sprint 4 | Analítica, IA predictiva, reportes y stepper de mapa | ✅ Completado |
 | Sprint 5 | Autenticación email/password, roles y solicitudes de acceso | ✅ Completado |

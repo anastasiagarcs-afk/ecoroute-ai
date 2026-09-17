@@ -234,7 +234,7 @@ export default function CierreJornadaModal({
           <button
             type="button"
             onClick={onConfirmar}
-            disabled={guardando || !tieneRutas}
+            disabled={guardando}
             className="rounded-xl bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {guardando ? "Guardando…" : "Confirmar Cierre"}

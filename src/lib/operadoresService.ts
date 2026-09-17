@@ -100,7 +100,7 @@ export async function obtenerRutaActivaOperador(
     .from("Rutas")
     .select("*")
     .eq("operador_asignado", operadorId)
-    .is("ultima_ejecucion", null)
+    .in("estado", ["aceptada", "en_progreso"])
     .order("fecha_creacion", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -111,69 +111,6 @@ export async function obtenerRutaActivaOperador(
   }
 
   return data as Ruta | null;
-}
-
-export async function aceptarRuta(rutaId: string): Promise<void> {
-  if (!estaSupabaseConfigurado()) {
-    throw new Error("Supabase no está configurado");
-  }
-
-  const supabase = getSupabaseClient();
-  const { error } = await supabase
-    .from("Rutas")
-    .update({ estado: "aceptada" as EstadoRuta } as UpdateRuta)
-    .eq("id", rutaId);
-
-  if (error) {
-    console.error("Error al aceptar ruta:", JSON.stringify(error, null, 2));
-    // Verificar si es error de políticas Row Level Security (RLS)
-    // error.code es un número de error de Supabase (42501 = permission denied)
-    if (error?.code && error?.code === 42501) {
-      console.error("⚠️ Error RLS detectado: Políticas de seguridad denegaron la actualización de la ruta");
-      console.error("   Detalle: El usuario actual ('auth.uid()') no tiene permiso para actualizar rutas");
-    }
-    throw new Error("No se pudo aceptar la ruta");
-  }
-}
-
-export async function rechazarRuta(rutaId: string): Promise<void> {
-  if (!estaSupabaseConfigurado()) {
-    throw new Error("Supabase no está configurado");
-  }
-
-  const supabase = getSupabaseClient();
-  const { error } = await supabase
-    .from("Rutas")
-    .update({ estado: "rechazada" as EstadoRuta } as UpdateRuta)
-    .eq("id", rutaId);
-
-  if (error) {
-    console.error("Error al rechazar ruta:", JSON.stringify(error, null, 2));
-    // Verificar si es error de políticas Row Level Security (RLS)
-    // error.code es un número de error de Supabase (42501 = permission denied)
-    if (error?.code && error?.code === 42501) {
-      console.error("⚠️ Error RLS detectado: Políticas de seguridad denegaron el rechazo de la ruta");
-      console.error("   Detalle: El usuario actual ('auth.uid()') no tiene permiso para actualizar rutas");
-    }
-    throw new Error("No se pudo rechazar la ruta");
-  }
-}
-
-export async function marcarRutaEnProgreso(rutaId: string): Promise<void> {
-  if (!estaSupabaseConfigurado()) {
-    throw new Error("Supabase no está configurado");
-  }
-
-  const supabase = getSupabaseClient();
-  const { error } = await supabase
-    .from("Rutas")
-    .update({ estado: "en_progreso" as EstadoRuta } as UpdateRuta)
-    .eq("id", rutaId);
-
-  if (error) {
-    console.error("Error al marcar ruta en progreso:", JSON.stringify(error, null, 2));
-    throw new Error("No se pudo marcar la ruta como en progreso");
-  }
 }
 
 export async function cancelarRuta(rutaId: string): Promise<void> {
@@ -224,7 +161,7 @@ export async function obtenerHistorialOperador(
     .from("Rutas")
     .select("*")
     .eq("operador_asignado", operadorId)
-    .eq("estado", "completada")
+    .in("estado", ["completada", "finalizada_incompleta", "cancelada", "rechazada"])
     .order("ultima_ejecucion", { ascending: false });
 
   if (error) {
@@ -245,7 +182,7 @@ export async function obtenerRutasActivasOperador(
     .from("Rutas")
     .select("*")
     .eq("operador_asignado", operadorId)
-    .in("estado", ["pendiente", "aceptada", "en_progreso"])
+    .in("estado", ["aceptada", "en_progreso"])
     .order("fecha_creacion", { ascending: false });
 
   if (error) {
@@ -256,7 +193,7 @@ export async function obtenerRutasActivasOperador(
   return (data ?? []) as Ruta[];
 }
 
-export async function marcarRutaCompletada(rutaId: string): Promise<void> {
+export async function marcarRutaEnProgreso(rutaId: string): Promise<void> {
   if (!estaSupabaseConfigurado()) {
     throw new Error("Supabase no está configurado");
   }
@@ -264,21 +201,53 @@ export async function marcarRutaCompletada(rutaId: string): Promise<void> {
   const supabase = getSupabaseClient();
   const { error } = await supabase
     .from("Rutas")
-    .update({
-      estado: "completada" as EstadoRuta,
-      ultima_ejecucion: new Date().toISOString(),
-    } as UpdateRuta)
+    .update({ estado: "en_progreso" as EstadoRuta } as UpdateRuta)
     .eq("id", rutaId);
 
   if (error) {
-    console.error("Error al marcar ruta completada:", JSON.stringify(error, null, 2));
-    // Verificar si es error de políticas Row Level Security (RLS)
-    if (error?.code && error?.code === 42501) {
-      console.error("⚠️ Error RLS detectado: Políticas de seguridad denegaron la actualización de estado a completada");
-      console.error("   Detalle: El usuario actual ('auth.uid()') no tiene permiso para actualizar rutas");
-    }
-    throw new Error("No se pudo marcar la ruta como completada");
+    console.error("Error al marcar ruta en progreso:", JSON.stringify(error, null, 2));
+    throw new Error("No se pudo marcar la ruta como en progreso");
   }
+}
+
+export async function marcarRutaCompletada(rutaId: string): Promise<boolean> {
+  if (!estaSupabaseConfigurado()) {
+    console.warn("[EcoRoute] Supabase no está configurado");
+    return false;
+  }
+
+  const supabase = getSupabaseClient();
+
+  // Verificar sesión activa
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) {
+    console.error("[EcoRoute] Error al obtener sesión:", sessionError.message);
+    return false;
+  }
+  if (!session) {
+    console.warn("[EcoRoute] No hay sesión activa para completar la ruta");
+    return false;
+  }
+
+  console.log("[EcoRoute] Intentando completar ruta vía RPC:", rutaId);
+
+  // Llamar a la función RPC que bypassa RLS de forma segura
+  const { data, error } = await supabase.rpc("completar_ruta", {
+    p_ruta_id: rutaId,
+  });
+
+  if (error) {
+    console.error("[EcoRoute] Error en RPC completar_ruta:", error.message);
+    return false;
+  }
+
+  if (!data || !data.exito) {
+    console.error("[EcoRoute] RPC retornó éxito=false:", data);
+    return false;
+  }
+
+  console.log("[EcoRoute] Ruta completada exitosamente:", data);
+  return true;
 }
 
 export async function marcarRutaFinalizadaIncompleta(rutaId: string): Promise<void> {

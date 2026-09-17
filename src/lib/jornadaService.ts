@@ -4,7 +4,7 @@ import {
 } from "@/lib/supabaseClient";
 import { aIntervalo } from "@/lib/historialRutas";
 import { marcarRutaFinalizadaIncompleta } from "@/lib/operadoresService";
-import type { Contenedor, HistorialRuta, InsertHistorialRuta, Ruta } from "@/types/schema";
+import type { Contenedor, EstadoRuta, HistorialRuta, InsertHistorialRuta, Ruta, UpdateRuta } from "@/types/schema";
 
 export interface DetalleRutaJornada {
   nombre: string;
@@ -54,9 +54,13 @@ export function calcularResumenJornada(
 ): ResumenJornada {
   const hoy = new Date();
 
-  const rutasDelDia = rutas.filter(
-    (r) => r.ultima_ejecucion && esMismaFecha(r.ultima_ejecucion, hoy)
-  );
+  const rutasDelDia = (() => {
+    const hoyRutas = rutas.filter(
+      (r) => r.fecha_creacion && esMismaFecha(r.fecha_creacion, hoy)
+    );
+    if (hoyRutas.length > 0) return hoyRutas;
+    return rutas.filter((r) => r.estado !== "rechazada");
+  })();
 
   let kmTotales = 0;
   let tiempoTotalMinutos = 0;
@@ -234,5 +238,62 @@ export async function obtenerResumenesJornada(
       });
   } catch {
     return [];
+  }
+}
+
+export async function limpiarRutasDuplicadas(operadorId: string): Promise<number> {
+  if (!estaSupabaseConfigurado()) return 0;
+
+  try {
+    const supabase = getSupabaseClient();
+    const { data: rutas, error } = await supabase
+      .from("Rutas")
+      .select("id, contenedores_asignados")
+      .eq("operador_asignado", operadorId)
+      .in("estado", ["pendiente", "aceptada", "en_progreso"]);
+
+    if (error || !rutas || rutas.length === 0) return 0;
+
+    const idsALimpiar: string[] = [];
+
+    for (const ruta of rutas) {
+      const ids = (ruta.contenedores_asignados ?? []) as string[];
+      if (ids.length === 0) {
+        idsALimpiar.push(ruta.id);
+        continue;
+      }
+
+      const { data: cts } = await supabase
+        .from("Contenedores")
+        .select("nivel_llenado")
+        .in("id", ids);
+
+      if (cts && cts.every((c) => c.nivel_llenado === 0)) {
+        idsALimpiar.push(ruta.id);
+      }
+    }
+
+    if (idsALimpiar.length === 0) return 0;
+
+    const { error: updateError } = await supabase
+      .from("Rutas")
+      .update({
+        estado: "cancelada" as EstadoRuta,
+        ultima_ejecucion: new Date().toISOString(),
+      } as UpdateRuta)
+      .in("id", idsALimpiar);
+
+    if (updateError) {
+      console.error("[EcoRoute] Error al limpiar rutas duplicadas:", updateError.message);
+      return 0;
+    }
+
+    return idsALimpiar.length;
+  } catch (err) {
+    console.error(
+      "[EcoRoute] Excepción al limpiar rutas duplicadas:",
+      err instanceof Error ? err.message : err
+    );
+    return 0;
   }
 }
