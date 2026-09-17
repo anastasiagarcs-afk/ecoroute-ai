@@ -30,7 +30,7 @@ function formatearFecha(iso: string): string {
   }
 }
 
-function badgeEstado(estado: string): { texto: string; clases: string } {
+function badgeEstado(estado?: string | null): { texto: string; clases: string } {
   switch (estado) {
     case "completada":
       return {
@@ -54,7 +54,7 @@ function badgeEstado(estado: string): { texto: string; clases: string } {
       };
     default:
       return {
-        texto: estado,
+        texto: estado ?? "Desconocido",
         clases: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
       };
   }
@@ -66,7 +66,7 @@ export default function CierreJornadaModal({
   onCancelar,
   guardando,
 }: CierreJornadaModalProps) {
-  const tieneRutas = resumen.rutas.length > 0;
+  const tieneRutas = (resumen?.rutas?.length ?? 0) > 0;
 
   return (
     <div
@@ -100,7 +100,7 @@ export default function CierreJornadaModal({
               Cierre de Jornada
             </h2>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              {formatearFecha(resumen.fecha)}
+              {formatearFecha(resumen?.fecha)}
             </p>
           </div>
         </div>
@@ -116,7 +116,7 @@ export default function CierreJornadaModal({
             <div className="mb-5 grid grid-cols-3 gap-3">
               <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-center dark:border-zinc-700 dark:bg-zinc-800/50">
                 <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-                  {resumen.rutasEjecutadas}
+                  {resumen?.rutasEjecutadas ?? 0}
                 </p>
                 <p className="mt-0.5 text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
                   Completadas
@@ -124,7 +124,7 @@ export default function CierreJornadaModal({
               </div>
               <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-center dark:border-zinc-700 dark:bg-zinc-800/50">
                 <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                  {resumen.rutasEnProceso}
+                  {resumen?.rutasEnProceso ?? 0}
                 </p>
                 <p className="mt-0.5 text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
                   En proceso
@@ -132,7 +132,7 @@ export default function CierreJornadaModal({
               </div>
               <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-center dark:border-zinc-700 dark:bg-zinc-800/50">
                 <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                  {resumen.kmTotales.toFixed(1)}
+                  {(resumen?.kmTotales ?? 0).toFixed(1)}
                 </p>
                 <p className="mt-0.5 text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
                   Km totales
@@ -140,7 +140,7 @@ export default function CierreJornadaModal({
               </div>
               <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-center dark:border-zinc-700 dark:bg-zinc-800/50">
                 <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                  {resumen.contenedoresVaciados}
+                  {resumen?.contenedoresVaciados ?? 0}
                 </p>
                 <p className="mt-0.5 text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
                   Contenedores vaciados
@@ -148,7 +148,7 @@ export default function CierreJornadaModal({
               </div>
               <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-center dark:border-zinc-700 dark:bg-zinc-800/50">
                 <p className="text-2xl font-bold text-violet-600 dark:text-violet-400">
-                  {formatearTiempo(resumen.tiempoTotalMinutos)}
+                  {formatearTiempo(resumen?.tiempoTotalMinutos ?? 0)}
                 </p>
                 <p className="mt-0.5 text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
                   Duración total
@@ -156,7 +156,7 @@ export default function CierreJornadaModal({
               </div>
               <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-center dark:border-zinc-700 dark:bg-zinc-800/50">
                 <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                  {resumen.combustibleEstimadoLitros.toFixed(1)} L
+                  {(resumen?.combustibleEstimadoLitros ?? 0).toFixed(1)} L
                 </p>
                 <p className="mt-0.5 text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
                   Combustible
@@ -164,7 +164,7 @@ export default function CierreJornadaModal({
               </div>
             </div>
 
-            {resumen.rutasEnProceso > 0 && (
+            {(resumen?.rutasEnProceso ?? 0) > 0 && (
               <div className="mb-4 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-800/40 dark:bg-amber-900/20">
                 <svg
                   className="h-4 w-4 flex-shrink-0 text-amber-600 dark:text-amber-400"
@@ -180,19 +180,19 @@ export default function CierreJornadaModal({
                   />
                 </svg>
                 <p className="text-xs font-medium text-amber-700 dark:text-amber-300">
-                  {resumen.rutasEnProceso} ruta{resumen.rutasEnProceso !== 1 ? "s" : ""}{" "}
+                  {resumen?.rutasEnProceso ?? 0} ruta{(resumen?.rutasEnProceso ?? 0) !== 1 ? "s" : ""}{" "}
                   en proceso serán marcadas como incompletas al confirmar el cierre.
                 </p>
               </div>
             )}
 
-            {resumen.rutas.length > 0 && (
+            {(resumen?.rutas?.length ?? 0) > 0 && (
               <div className="mb-5">
                 <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                   Detalle por ruta
                 </h3>
                 <ul className="max-h-40 space-y-1.5 overflow-y-auto">
-                  {resumen.rutas.map((ruta, idx) => {
+                  {(resumen?.rutas ?? []).map((ruta, idx) => {
                     const badge = badgeEstado(ruta.estado);
                     return (
                       <li
@@ -204,8 +204,8 @@ export default function CierreJornadaModal({
                         </span>
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                            {ruta.distanciaKm.toFixed(1)} km ·{" "}
-                            {ruta.contenedoresCount} cont.
+                            {(ruta.distanciaKm ?? 0).toFixed(1)} km ·{" "}
+                            {ruta.contenedoresCount ?? 0} cont.
                           </span>
                           <span
                             className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${badge.clases}`}
