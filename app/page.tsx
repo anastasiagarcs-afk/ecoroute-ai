@@ -85,7 +85,24 @@ export default function Home() {
     return (
       <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
         <header className="flex items-center justify-between px-4 py-4 sm:px-6 lg:px-10">
-          <h1 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+          <h1 className="flex items-center text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+            <svg className="w-8 h-8 mr-2 inline-block flex-shrink-0" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <defs>
+                <linearGradient id="lpPinGrad" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="#10B981"/>
+                  <stop offset="100%" stopColor="#06B6D4"/>
+                </linearGradient>
+                <linearGradient id="lpLeafGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#34D399"/>
+                  <stop offset="100%" stopColor="#10B981"/>
+                </linearGradient>
+              </defs>
+              <path d="M32 62 C32 62 14 42 14 30 A18 18 0 1 1 50 30 C50 42 32 62 32 62 Z" fill="url(#lpPinGrad)"/>
+              <circle cx="32" cy="30" r="13" fill="#0F172A"/>
+              <path d="M32 20 C41 25 41 35 32 40 C23 35 23 25 32 20 Z" fill="url(#lpLeafGrad)"/>
+              <path d="M32 21 L32 39" stroke="#0F172A" strokeWidth="1.5" opacity="0.55"/>
+              <path d="M46 3 L48.8 12.2 L58 15 L48.8 17.8 L46 27 L43.2 17.8 L34 15 L43.2 12.2 Z" fill="#3B82F6" stroke="#FFFFFF" strokeWidth="1"/>
+            </svg>
             EcoRoute AI
           </h1>
           <Link
