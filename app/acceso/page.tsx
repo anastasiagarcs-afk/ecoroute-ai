@@ -87,22 +87,22 @@ export default function PaginaAcceso() {
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-4 dark:bg-zinc-950">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
-          <svg className="w-16 h-16 mx-auto mb-4" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-label="EcoRoute AI">
+          <svg className="w-28 h-28 mx-auto mb-4" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-label="EcoRoute AI">
             <defs>
               <linearGradient id="loginPinGrad" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stop-color="#10B981"/>
-                <stop offset="100%" stop-color="#06B6D4"/>
+                <stop offset="0%" stopColor="#10B981"/>
+                <stop offset="100%" stopColor="#06B6D4"/>
               </linearGradient>
               <linearGradient id="loginLeafGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#34D399"/>
-                <stop offset="100%" stop-color="#10B981"/>
+                <stop offset="0%" stopColor="#34D399"/>
+                <stop offset="100%" stopColor="#10B981"/>
               </linearGradient>
             </defs>
             <path d="M32 62 C32 62 14 42 14 30 A18 18 0 1 1 50 30 C50 42 32 62 32 62 Z" fill="url(#loginPinGrad)"/>
             <circle cx="32" cy="30" r="13" fill="#0F172A"/>
             <path d="M32 20 C41 25 41 35 32 40 C23 35 23 25 32 20 Z" fill="url(#loginLeafGrad)"/>
-            <path d="M32 21 L32 39" stroke="#0F172A" stroke-width="1" opacity="0.55"/>
-            <path d="M44 7.2 L45.6 13.1 L51.5 14.7 L45.6 16.3 L44 22.2 L42.4 16.3 L36.5 14.7 L42.4 13.1 Z" fill="#3B82F6"/>
+            <path d="M32 21 L32 39" stroke="#0F172A" strokeWidth="1.5" opacity="0.55"/>
+            <path d="M46 4.5 L48.3 12.8 L56.6 15.1 L48.3 17.4 L46 25.7 L43.7 17.4 L35.4 15.1 L43.7 12.8 Z" fill="#2563EB" stroke="#FFFFFF" strokeWidth="1"/>
           </svg>
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
             {modo === "login" ? "Iniciar sesion" : "Crear cuenta"}
