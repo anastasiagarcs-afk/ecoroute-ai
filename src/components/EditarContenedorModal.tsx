@@ -108,7 +108,7 @@ export default function EditarContenedorModal({
                 <circle cx="32" cy="30" r="13" fill="#0F172A"/>
                 <path d="M32 20 C41 25 41 35 32 40 C23 35 23 25 32 20 Z" fill="url(#ecLeafGrad)"/>
                 <path d="M32 21 L32 39" stroke="#0F172A" strokeWidth="1.5" opacity="0.55"/>
-                <path d="M46 4.5 L48.3 12.8 L56.6 15.1 L48.3 17.4 L46 25.7 L43.7 17.4 L35.4 15.1 L43.7 12.8 Z" fill="#2563EB" stroke="#FFFFFF" strokeWidth="1"/>
+                <path d="M46 3 L48.8 12.2 L58 15 L48.8 17.8 L46 27 L43.2 17.8 L34 15 L43.2 12.2 Z" fill="#38BDF8"/>
               </svg>
               Editar contenedor {contenedor.numero_identificacion}
             </h2>
