@@ -82,66 +82,90 @@ Los requerimientos se derivaron de las Historias de Usuario (HU-01…HU-15) y se
 
 | ID | Requerimiento Funcional | HU origen | Prioridad | Estado | Evidencia en código |
 | --- | --- | --- | --- | --- | --- |
-| RF-01 | Registrar contenedores (código, tipo, nivel, capacidad, coordenadas) | HU-01 | Alta | **Implementado** | `NuevoContenedorModal.tsx`; `contenedoresStore.ts:453` (RPC `registrar_contenedor`) |
-| RF-02 | Editar contenedores (nivel, tipo, estado) | HU-01 | Alta | **Implementado** | `EditarContenedorModal.tsx`; `contenedoresStore.ts:522` |
-| RF-03 | Eliminar contenedores | HU-01 | Alta | **Implementado** | `ConfirmarEliminarContenedorModal.tsx`; `contenedoresStore.ts:566` |
-| RF-04 | Listar / consultar inventario de contenedores | HU-01, HU-02 | Alta | **Implementado** | `contenedoresStore.ts:368` (`select` a Supabase) |
-| RF-05 | Mostrar mapa interactivo con contenedores | HU-02 | Alta | **Implementado** | `Map.tsx:157` (Leaflet + OpenStreetMap) |
-| RF-06 | Colorear marcadores según nivel de llenado | HU-02 | Alta | **Implementado** | `Map.tsx:49` (`colorPorNivel`) |
-| RF-07 | Consultar detalle de un contenedor (popup) | HU-03 | Alta | **Implementado** | `PopupContenedor.tsx`; `Map.tsx:265-271` |
-| RF-08 | Actualización periódica del nivel (cada 5 min) | HU-02 | Media | **Implementado** | `contenedoresStore.ts` (`INTERVALO_REFRESCO_CONTENEDORES_MS = 300000`, `mismoContenidoLista`) |
-| RF-09 | Generar ruta óptima (heurística TSP) | HU-04 | Alta | **Implementado** | `routeOptimizer.ts:170` (`optimizarRuta`) |
-| RF-10 | Priorizar contenedores críticos (>80%) | HU-04 | Alta | **Implementado** | `routeOptimizer.ts:126-144` |
-| RF-11 | Mostrar distancia total y tiempo estimado | HU-04 | Alta | **Implementado** | `routeOptimizer.ts:243-249`; `RoutePanel.tsx:376-398` |
-| RF-12 | Trazar polilínea de la ruta sobre el mapa | HU-05 | Alta | **Implementado** | `Map.tsx:318-365` (`L.polyline`) |
-| RF-13 | Resaltar contenedor actual y siguiente | HU-05 | Media | **Implementado** | `RoutesMapView.tsx` (stepper con parada actual/siguiente, colores `COLOR_EMERALD`/`COLOR_QUARTZ` en `Map.tsx`) |
-| RF-14 | Alertar contenedores que superen 80% | HU-06 | Alta | **Implementado** | `DashboardGerencial.tsx` (tabla + contador de críticos) |
-| RF-15 | Marcar alerta como «atendido» | HU-06 | Media | **Implementado** | `DashboardGerencial.tsx` (botón «Atender / Vaciar» → `vaciarContenedor`) |
-| RF-16 | Mostrar guías de separación por material (públicas) | HU-07 | Alta | **Implementado** | `SeparacionGuia.tsx`; ruta `/separacion` |
-| RF-17 | Registrar entregas de reciclaje (material + kg) | HU-08 | Alta | **Implementado** | `RegistroReciclajeForm.tsx`; `reciclajeService.ts:117` |
-| RF-18 | Calcular y acumular puntos por entregas | HU-08 | Alta | **Implementado** | `gamificacion.ts:65`; `reciclajeService.ts:136-186` |
-| RF-19 | Mostrar historial de entregas del ciudadano | HU-08 | Media | **Implementado** | `reciclajeService.ts:246` (`obtenerEntregasRecientes`) |
-| RF-20 | Mostrar niveles, progreso y catálogo de recompensas | HU-08 | Media | **Implementado** | `GamificacionPanel.tsx`; `gamificacion.ts:82-190` |
-| RF-21 | Dashboard gerencial con KPIs (contenedores, promedio, rutas, toneladas) | HU-09 | Alta | **Implementado** | `DashboardGerencial.tsx` (tarjetas KPI) |
-| RF-22 | Filtros por zona y fechas en el dashboard | HU-09 | Media | **Implementado** | `DashboardGerencial.tsx` (select de zona + rango de fechas) |
-| RF-23 | Reportes exportables (Excel/PDF) | HU-10 | Media | **Implementado** | `reporteExportador.ts` (descarga CSV + impresión PDF con filtros por fecha/zona) |
-| RF-24 | Alertas predictivas por IA (Gemini API) | HU-11 | Alta | **Implementado** | `geminiPredictiveService.ts` (análisis con Gemini + heurística, lecturas de `LecturasSensores`, notificación de riesgo) |
-| RF-25 | Gestión de roles y permisos (Admin/Operador/Ciudadano) | HU-12 | Alta | **Implementado** | `rolesAutorizados.ts` (`puede()`); gates en `DashboardGerencial.tsx`, `RoutesMapView.tsx`; migración `09_roles_y_solicitudes_acceso_rls.sql` |
-| RF-26 | Solicitud de acceso y aprobación (pendiente/aprobado/rechazado) | HU-13 | Media | **Implementado** | `authService.ts` (`registrarCuenta`, `enviarSolicitudAcceso`, `aprobarSolicitud`); `app/acceso/page.tsx` (stepper 2 pasos); tabla `SolicitudesAcceso` + RPC |
-| RF-27 | Cierre de jornada con dos botones explícitos (parcial / final) | HU-14 | Media | **Implementado** | `app/page.tsx` botones "Cierre Parcial" y "Cierre Final"; `jornadaService.ts:calcularResumenJornada`; `cerrarJornada` |
-| RF-28 | Diferenciar cierre parcial vs. cierre final en historial | HU-14 | Media | **Implementado** | `jornadaService.ts:ResumenJornada.tipo_cierre`; `HistorialOperador.tsx:badgeTipoCierre` |
-| RF-29 | Mantener tiempo activo de jornada tras cierre parcial | HU-14 | Media | **Implementado** | `app/page.tsx:fechaInicioJornada` (localStorage); `jornadaService.ts:calcularResumenJornada` |
-| RF-30 | Aislamiento de métricas tras cierre final | HU-14 | Media | **Implementado** | `operadoresService.ts:obtenerRutasJornadaActual`; `jornadaService.ts:calcularResumenJornadaFinal` |
-| RF-31 | Completar ruta sin bloqueos RLS mediante RPC | HU-14 | Alta | **Implementado** | `operadoresService.ts:marcarRutaCompletada`; `supabase/migrations/22_rpc_completar_ruta.sql` |
-| RF-32 | Historial del operador en dos columnas (jornadas + rutas) | HU-14 | Media | **Implementado** | `HistorialOperador.tsx` layout `lg:grid-cols-2` |
-| RF-33 | Notificaciones visuales (toasts) | HU-06, HU-08 | Media | **Implementado** | `toastStore.ts`; `ToastHost.tsx` (éxito/error/info) |
-| RF-34 | Integración con webhook n8n para registro de reciclaje | HU-08 | Media | **Implementado** | `n8nWebhook.ts`; `reciclajeService.ts:189` |
-| RF-35 | Persistencia del historial de rutas ejecutadas | HU-04, HU-05 | Alta | **Implementado** | `historialRutas.ts:282` (Supabase + localStorage) |
-| RF-36 | Modo de respaldo local (offline) | Transversal | Alta | **Implementado** | `contenedoresStore.ts:382-407`; `historialRutas.ts:226-243` |
-| RF-37 | Detección de anomalías en sensores | HU-15 | Media | **Pendiente** | Tabla `LecturasSensores` lista para el cálculo |
+| RF-01 | Registrar contenedores (código, tipo, nivel, capacidad, coordenadas) | HU-01 | Alta | 🟢 Completado | `NuevoContenedorModal.tsx`; `contenedoresStore.ts:453` (RPC `registrar_contenedor`) |
+| RF-02 | Editar contenedores (nivel, tipo, estado) | HU-01 | Alta | 🟢 Completado | `EditarContenedorModal.tsx`; `contenedoresStore.ts:522` |
+| RF-03 | Eliminar contenedores | HU-01 | Alta | 🟢 Completado | `ConfirmarEliminarContenedorModal.tsx`; `contenedoresStore.ts:566` |
+| RF-04 | Listar / consultar inventario de contenedores | HU-01, HU-02 | Alta | 🟢 Completado | `contenedoresStore.ts:368` (`select` a Supabase) |
+| RF-05 | Mostrar mapa interactivo con contenedores (Leaflet + OpenStreetMap) | HU-02 | Alta | 🟢 Completado | `Map.tsx:157` (Leaflet + OpenStreetMap) |
+| RF-06 | Colorear marcadores según nivel de llenado (<50% verde, 50–80% ámbar, >80% rojo) | HU-02 | Alta | 🟢 Completado | `Map.tsx:49` (`colorPorNivel`), umbrales en `Map.tsx:18-23` |
+| RF-07 | Consultar detalle de un contenedor (popup con ID, ubicación, tipo, nivel, última lectura) | HU-03 | Alta | 🟢 Completado | `PopupContenedor.tsx`; `Map.tsx:265-271` |
+| RF-08 | Actualización periódica del nivel de llenado (cada 5 minutos) | HU-02 | Media | 🟢 Completado | `contenedoresStore.ts` (`INTERVALO_REFRESCO_CONTENEDORES_MS = 300000`, `mismoContenidoLista`) |
+| RF-09 | Generar ruta óptima (heurística TSP) priorizando contenedores >80% | HU-04 | Alta | 🟢 Completado | `routeOptimizer.ts:170` (`optimizarRuta`), `routeOptimizer.ts:126` (`esContenedorCritico`) |
+| RF-10 | Priorizar contenedores críticos (>80% de llenado) | HU-04 | Alta | 🟢 Completado | `routeOptimizer.ts:126-144`, umbral `UMBRAL_CRITICO = 80` |
+| RF-11 | Mostrar distancia total y tiempo estimado de la ruta | HU-04 | Alta | 🟢 Completado | `routeOptimizer.ts:243-249`; `RoutePanel.tsx:376-398` |
+| RF-12 | Trazar polilínea de la ruta sobre el mapa | HU-05 | Alta | 🟢 Completado | `Map.tsx:318-365` (`L.polyline`) |
+| RF-13 | Resaltar contenedor actual y siguiente en la ruta (stepper) | HU-05 | Media | 🟢 Completado | `RoutesMapView.tsx` (stepper con parada actual/siguiente, colores `COLOR_EMERALD`/`COLOR_QUARTZ`) |
+| RF-14 | Alertar contenedores que superen 80% de capacidad | HU-06 | Alta | 🟢 Completado | `DashboardGerencial.tsx` (tabla + contador de críticos, umbral 80%) |
+| RF-15 | Marcar alerta como «atendido» (vaciar contenedor) | HU-06 | Media | 🟢 Completado | `DashboardGerencial.tsx` (botón «Atender / Vaciar» → `vaciarContenedor`) |
+| RF-16 | Alertas predictivas por IA (Gemini API): probabilidad >85% en <4 horas | HU-11 | Alta | 🟢 Completado | `geminiPredictiveService.ts` (Gemini API + heurística, notificación de riesgo) |
+| RF-17 | Dashboard gerencial con KPIs (contenedores, promedio, rutas, toneladas) | HU-09 | Alta | 🟢 Completado | `DashboardGerencial.tsx` (tarjetas `TarjetaKpi`) |
+| RF-18 | Filtros por zona y fechas en el dashboard gerencial | HU-09 | Media | 🟢 Completado | `DashboardGerencial.tsx` (select de zona + rango de fechas) |
+| RF-19 | Reportes exportables (CSV/PDF) con filtros por fecha y zona | HU-10 | Media | 🟢 Completado | `reporteExportador.ts` (`descargarCSV`, `imprimirReporte`) |
+| RF-20 | Gestión de roles y permisos (Admin/Gerente/Operador/Ciudadano) | HU-12 | Alta | 🟢 Completado | `rolesAutorizados.ts` (`puede()`, `PERMISOS`); gates en componentes |
+| RF-21 | Solicitud de acceso y aprobación/rechazo por Admin | HU-13 | Media | 🟢 Completado | `authService.ts`, `adminService.ts`; `app/acceso/page.tsx`; RPC `aprobar_solicitud_acceso` |
+| RF-22 | Detección de anomalías en sensores (comparar nivel real vs. esperado) | HU-15 | Media | 🔴 No Implementado | Tabla `LecturasSensores` existe, pero sin lógica de detección de desviaciones |
+| RF-23 | Análisis de desviaciones estadísticas (sensores sospechosos >7 días) | HU-15 | Media | 🔴 No Implementado | Sin implementación; HU-15 está pendiente |
+| RF-24 | Guías de separación por material (acceso público sin login) | HU-07 | Alta | 🟢 Completado | `SeparacionGuia.tsx`; ruta `/separacion` (pública) |
+| RF-25 | Registrar entregas de reciclaje (material + kg) | HU-08 | Alta | 🟢 Completado | `RegistroReciclajeForm.tsx`; `reciclajeService.ts:117` |
+| RF-26 | Calcular y acumular puntos por entregas (puntos = kg × puntosPorKg) | HU-08 | Alta | 🟢 Completado | `gamificacion.ts:65`; `reciclajeService.ts:136-186` |
+| RF-27 | Mostrar historial de entregas del ciudadano | HU-08 | Media | 🟢 Completado | `reciclajeService.ts:246` (`obtenerEntregasRecientes`) |
+| RF-28 | Mostrar niveles, progreso y catálogo de recompensas | HU-08 | Media | 🟢 Completado | `GamificacionPanel.tsx`; `gamificacion.ts:82-190` |
+| RF-29 | Cierre de jornada con dos botones explícitos (parcial / final) | HU-14 | Media | 🟢 Completado | `app/page.tsx` botones "Cierre Parcial" y "Cierre Final"; `jornadaService.ts:calcularResumenJornada`, `calcularResumenJornadaFinal` |
+| RF-30 | Consolidado diario en historial (jornadas + rutas en dos columnas) | HU-14 | Media | 🟢 Completado | `HistorialOperador.tsx` layout `lg:grid-cols-2` (Jornadas / Rutas Completadas) |
+| RF-31 | Completar ruta sin bloqueos RLS mediante RPC `completar_ruta` | HU-14 | Alta | 🟢 Completado | `operadoresService.ts:marcarRutaCompletada`; `supabase/migrations/22_rpc_completar_ruta.sql` |
+| RF-32 | Integración con webhook n8n para registro de reciclaje (fallback a Supabase) | HU-08 | Media | 🟢 Completado | `n8nWebhook.ts` (timeout 6s); `reciclajeService.ts:189` |
+
+**Leyenda de estados**: 🟢 Completado / Implementado · 🔵 En Proceso / Por Terminar · 🟡 Por Revisar / Ajustes pendientes · 🔴 No Implementado / Fuera de Alcance
 
 ### b.2 Requerimientos No Funcionales (RNF-01…RNF-14)
 
 | ID | Requerimiento No Funcional | Prioridad | Estado | Evidencia en código |
 | --- | --- | --- | --- | --- |
-| RNF-01 | Tiempo de respuesta menor a 2 s en operaciones principales | Media | En desarrollo | `routeOptimizer.ts` (timeout OSRM 12 s); `n8nWebhook.ts` (timeout 6 s) |
-| RNF-02 | Diseño responsivo (móvil, tablet, escritorio) | Alta | **Implementado** | Grids Twbreak en `RoutesMapView.tsx:42`; `app/page.tsx:67` |
-| RNF-03 | Soporte de modo claro/oscuro | Media | **Implementado** | `globals.css:15-20`, clases `dark:` en componentes |
-| RNF-04 | Seguridad de datos mediante Row Level Security | Alta | **Implementado** | 12 políticas RLS en migraciones 02/03/04/06 |
-| RNF-05 | Tipado estricto con TypeScript | Alta | **Implementado** | `tsconfig.json` (`strict`); tipos en `src/types/schema.ts` |
-| RNF-06 | Código sin errores de lint (ESLint 9) | Alta | **Implementado** | `npm run lint` → 0 errores |
-| RNF-07 | Compilación sin errores | Alta | **Implementado** | `npx tsc --noEmit` y `npm run build` exitosos |
-| RNF-08 | Fallback offline con persistencia local | Alta | **Implementado** | `supabaseClient.ts:27-36`; `contenedoresStore` y `historialRutas` |
-| RNF-09 | Estabilidad de renderizado SSR en React 19 (sin bucles infinitos) | Alta | **Implementado** | `useSyncExternalStore` + `queueMicrotask` en `Map.tsx:203`; `ToastHost.tsx:12` |
-| RNF-10 | Compatibilidad con mapas interactivos | Alta | **Implementado** | Leaflet 1.9.4 con carga dinámica (`Map.tsx:33-36`) |
-| RNF-11 | Accesibilidad básica (roles ARIA, `aria-live`) | Media | En desarrollo | Roles `dialog`, `alert`, `status` en modales y toasts |
-| RNF-12 | Escalabilidad de la base de datos (PostGIS + índices) | Media | **Implementado** | Índices en `01_initial_schema.sql:131-136` |
-| RNF-13 | Disponibilidad de la demo (no bloquear si el backend falla) | Media | **Implementado** | Respaldos `CONTENEDORES_FALLBACK` y localStorage |
-| RNF-14 | Documentación y mantenibilidad | Alta | **Implementado** | `npm run informe` regenera `BITACORA.md`; este informe |
+| RNF-01 | Tiempo de respuesta menor a 2 s en operaciones principales | Media | 🟡 Por Revisar | `routeOptimizer.ts` (timeout OSRM 12s); `n8nWebhook.ts` (timeout 6s). Requiere optimización o ajuste de expectativa. |
+| RNF-02 | Diseño responsivo (móvil, tablet, escritorio) | Alta | 🟢 Completado | Grids Tailwind en `RoutesMapView.tsx:42` (`grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px]`); `app/page.tsx:67` (`p-4 sm:p-6 lg:p-10`) |
+| RNF-03 | Soporte de modo claro/oscuro automático | Media | 🟢 Completado | `globals.css:15-20` (variables CSS), clases `dark:` en componentes, detección `prefers-color-scheme` |
+| RNF-04 | Seguridad de datos mediante Row Level Security (RLS) | Alta | 🟢 Completado | 12 políticas RLS en migraciones 02/03/04/06/08/09/12/15; todas las tablas protegidas |
+| RNF-05 | Tipado estricto con TypeScript (`strict: true`) | Alta | 🟢 Completado | `tsconfig.json` (`strict: true`); tipos en `src/types/schema.ts`; 0 errores de compilación |
+| RNF-06 | Código sin errores de lint (ESLint 9) | Alta | 🟢 Completado | `eslint.config.mjs`; `npm run lint` pasa sin errores |
+| RNF-07 | Compilación sin errores (`tsc --noEmit` y `npm run build`) | Alta | 🟢 Completado | `npx tsc --noEmit` → 0 errores; `npm run build` exitoso (Next.js 16 Turbopack) |
+| RNF-08 | Fallback offline con persistencia local (no bloquear si backend falla) | Alta | 🟢 Completado | `supabaseClient.ts:27-36`; `contenedoresStore.ts:382-407` (CONTENEDORES_FALLBACK); `historialRutas.ts:226-243` (localStorage) |
+| RNF-09 | Estabilidad de renderizado SSR en React 19 (sin bucles infinitos) | Alta | 🟢 Completado | `useSyncExternalStore` en `app/page.tsx`, `ToastHost.tsx`, `contenedoresStore.ts`; `queueMicrotask` en `Map.tsx:203` |
+| RNF-10 | Compatibilidad con mapas interactivos (Leaflet 1.9.4) | Alta | 🟢 Completado | Leaflet 1.9.4 con carga dinámica (`Map.tsx:33-36`); OpenStreetMap tiles |
+| RNF-11 | Accesibilidad básica (roles ARIA, `aria-live`, navegación por teclado) | Media | 🟡 Por Revisar | Roles `dialog`, `alert`, `status` en modales y toasts. Falta: navegación por teclado completa, testing con screen readers. |
+| RNF-12 | Escalabilidad de la base de datos (PostGIS + índices) | Media | 🟢 Completado | PostGIS habilitado (`01_initial_schema.sql:1`); índices en `01_initial_schema.sql:131-136` |
+| RNF-13 | Disponibilidad de la demo (no bloquear si el backend falla) | Media | 🟢 Completado | `CONTENEDORES_FALLBACK` (12 contenedores demo); localStorage para contenedores e historial |
+| RNF-14 | Documentación y mantenibilidad | Alta | 🟢 Completado | `npm run informe` regenera `BITACORA.md`; `INFORME_PROYECTO.md` actualizado; `README.md` |
 
----
+**Leyenda de estados**: 🟢 Completado / Implementado · 🔵 En Proceso / Por Terminar · 🟡 Por Revisar / Ajustes pendientes · 🔴 No Implementado / Fuera de Alcance
 
-## c. Historias de Usuario
+### b.3 Resumen de Progreso
+
+| Métrica | Total | 🟢 Completados | 🔵 En Proceso | 🟡 Por Revisar | 🔴 No Implementados | % Avance |
+| --- | --- | --- | --- | --- | --- | --- |
+| **Requerimientos Funcionales (RF)** | 32 | 30 | 0 | 0 | 2 | **93.75%** |
+| **Requerimientos No Funcionales (RNF)** | 14 | 12 | 0 | 2 | 0 | **85.71%** |
+| **Total del Sistema** | 46 | 42 | 0 | 2 | 2 | **91.30%** |
+
+#### Análisis de Requerimientos Pendientes
+
+**🔴 No Implementados (RF-22, RF-23 — Detección de Anomalías):**
+- **HU-15** está marcada como pendiente en la tabla de historias de usuario
+- La tabla `LecturasSensores` existe y contiene datos, pero no hay lógica de negocio para comparar nivel real vs. esperado
+- No se encontraron funciones de cálculo de desviaciones estadísticas ni de detección de sensores sospechosos con >7 días de valores constantes
+- **Recomendación**: Crear `anomalyDetectionService.ts` que analice tendencias y genere notificaciones tipo `alerta_anomalia`
+
+**🟡 Por Revisar (RNF-01, RNF-11):**
+- **RNF-01 (Tiempo de respuesta)**: Los timeouts actuales (OSRM 12s, n8n 6s) superan la meta de 2s. Se requiere optimización de queries o ajuste de expectativa en la documentación.
+- **RNF-11 (Accesibilidad WCAG 2.1)**: Los roles ARIA están implementados en modales y toasts, pero falta navegación por teclado completa, testing con screen readers y verificación de contraste WCAG AA.
+
+#### Recomendaciones Inmediatas
+
+| Prioridad | Acción | RF/RNF impactado | Esfuerzo estimado |
+| --- | --- | --- | --- |
+| **Alta** | Implementar HU-15: Crear `anomalyDetectionService.ts` con detección de desviaciones estadísticas en `LecturasSensores` | RF-22, RF-23 | 1 sprint |
+| **Media** | Optimizar tiempos de respuesta: caché de rutas, índices adicionales en BD, reducir payloads | RNF-01 | 2-3 días |
+| **Media** | Mejorar accesibilidad: navegación por teclado, `aria-label` en botones, testing con NVDA/VoiceOver | RNF-11 | 2-3 días |
+| **Baja** | Documentar limitaciones conocidas en README (timeouts, acceso WCAG parcial) | RNF-01, RNF-11 | 1 día |
 
 Matriz consolidada de las **15 historias de usuario** del proyecto con su rol, descripción, criterios de aceptación y trazabilidad hacia los requerimientos funcionales.
 
@@ -467,6 +491,7 @@ flowchart TB
 6. **Automatización (`N8N`)** recibe el registro de reciclaje por webhook y, si no responde en 6 s, se usa el fallback directo a Supabase.
 7. **IA (`GEMINI`)** alimenta las alertas predictivas del Sprint 4 (HU-11).
 8. **Roles y permisos**: `puede(rol, accion)` retorna `true` siempre para `Admin` (superusuario). Los demás roles siguen la matriz estricta: Ciudadano (mapa, separación, reciclaje), Operador (+ gestión contenedores, optimización rutas), Gerente (+ dashboard, reportes, IA).
+9. **Cierre de Jornada (Doble Botón)**: El operador tiene dos botones explícitos en `app/page.tsx` — "Cierre Parcial" (ámbar, calcula métricas desde `fecha_inicio` actual y mantiene la jornada activa) y "Cierre Final" (verde, consolida el total del día buscando el `fecha_inicio` más antiguo de los cierres y reinicia `fecha_inicio` a `now()`). Ambos persisten en `HistorialRutas` con `tipo_cierre` = "parcial" | "final". El historial del operador (`HistorialOperador.tsx`) muestra dos columnas: "Jornadas" (izquierda, con badges de tipo) y "Rutas Completadas" (derecha, expandibles). Las rutas pendientes se completan mediante la RPC `completar_ruta` (bypass de RLS).
 
 ---
 
