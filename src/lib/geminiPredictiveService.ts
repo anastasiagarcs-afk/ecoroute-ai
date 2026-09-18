@@ -297,25 +297,7 @@ export async function analizarContenedores(
   );
 }
 
-let idUsuarioNotificacion: string | null = null;
 const alertasNotificadas = new Set<string>();
-
-async function obtenerIdUsuarioDemo(): Promise<string | null> {
-  if (idUsuarioNotificacion) return idUsuarioNotificacion;
-  if (!estaSupabaseConfigurado()) return null;
-
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from("Usuarios")
-    .select("id")
-    .eq("email", "ciudadano.demo@ecoroute.com")
-    .limit(1)
-    .maybeSingle();
-
-  if (error || !data) return null;
-  idUsuarioNotificacion = data.id;
-  return data.id;
-}
 
 export async function guardarAlertaPredictiva(
   prediccion: PrediccionContenedor
@@ -326,19 +308,29 @@ export async function guardarAlertaPredictiva(
     return;
   }
 
-  const usuarioId = await obtenerIdUsuarioDemo();
-  if (!usuarioId) return;
-
   try {
     const supabase = getSupabaseClient();
-    const { error } = await supabase.from("Notificaciones").insert({
-      usuario_id: usuarioId,
-      tipo: "alerta_predictiva",
+
+    const { data: usuarios, error: errorUsuarios } = await supabase
+      .from("Usuarios")
+      .select("id")
+      .in("rol", ["Admin", "Gerente"]);
+
+    if (errorUsuarios || !usuarios || usuarios.length === 0) return;
+
+    const notificaciones = usuarios.map((u) => ({
+      usuario_id: u.id,
+      tipo: "alerta_predictiva" as const,
       mensaje: `${prediccion.codigo}: ${prediccion.mensaje}`,
       leida: false,
       fecha_envio: new Date().toISOString(),
       enlace: "/#dashboard",
-    });
+    }));
+
+    const { error } = await supabase
+      .from("Notificaciones")
+      .insert(notificaciones);
+
     if (error) return;
     alertasNotificadas.add(prediccion.contenedorId);
   } catch {

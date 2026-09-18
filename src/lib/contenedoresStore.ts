@@ -734,7 +734,22 @@ export function suscribirseRealtimeContenedores(): () => void {
               if (!existe) cache = [...cache, nuevo];
             }
           } else if (payload.eventType === "UPDATE") {
-            const actualizado = mapearContenedor(payload.new as Contenedor);
+            const contenedorExistente = cache.find(
+              (c) => c.id === (payload.new as { id?: string }).id
+            );
+            const datosNuevos = payload.new as Partial<Contenedor>;
+            const actualizado = mapearContenedor({
+              ...contenedorExistente,
+              ...datosNuevos,
+              nivel_llenado:
+                datosNuevos.nivel_llenado ??
+                contenedorExistente?.nivel_llenado ??
+                0,
+              capacidad:
+                datosNuevos.capacidad ??
+                contenedorExistente?.capacidad ??
+                0,
+            } as Contenedor);
             if (actualizado) {
               cache = cache.map((c) =>
                 c.id === actualizado.id ? actualizado : c

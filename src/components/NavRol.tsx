@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { obtenerSnapshotSesion, cerrarSesion } from "@/lib/authService";
+import { obtenerSnapshotSesion, suscribirseASesion, cerrarSesion } from "@/lib/authService";
 import { puede, ETIQUETAS_ROL } from "@/lib/rolesAutorizados";
 import { estaSupabaseConfigurado, getSupabaseClient } from "@/lib/supabaseClient";
 import { aceptarRuta } from "@/lib/operadoresService";
@@ -54,7 +54,7 @@ export default function NavRol() {
   const router = useRouter();
   const pathname = usePathname();
   const sesion = useSyncExternalStore(
-    () => () => {},
+    suscribirseASesion,
     obtenerSnapshotSesion,
     () => null
   );
@@ -64,52 +64,200 @@ export default function NavRol() {
   const [procesandoId, setProcesandoId] = useState<string | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!sesion || !estaSupabaseConfigurado()) return;
+  const obtenerUsuarioId = useCallback(async (): Promise<string | null> => {
+    if (!estaSupabaseConfigurado()) return null;
+
+    if (sesion?.usuario?.id) {
+      console.log("[NavRol] ID y Rol detectado:", { usuarioId: sesion.usuario.id, rol: sesion.usuario.rol });
+      return sesion.usuario.id;
+    }
 
     const supabase = getSupabaseClient();
-    supabase
+    const { data: { session } } = await supabase.auth.getSession();
+    const email = session?.user?.email ?? sesion?.usuario?.email;
+    if (!email) {
+      return null;
+    }
+
+    const { data: usuario } = await supabase
+      .from("Usuarios")
+      .select("id, rol")
+      .eq("email", email)
+      .single();
+
+    if (!usuario) {
+      return null;
+    }
+
+    console.log("[NavRol] ID y Rol detectado:", { usuarioId: usuario.id, rol: usuario.rol });
+    return usuario.id;
+  }, [sesion]);
+
+  const cargarNotificaciones = useCallback(async () => {
+    if (!estaSupabaseConfigurado()) {
+      setNotificaciones([]);
+      return;
+    }
+
+    const usuarioId = await obtenerUsuarioId();
+    if (!usuarioId) {
+      setNotificaciones([]);
+      return;
+    }
+
+    console.log("[NavRol] Cargando notificaciones para usuario_id:", usuarioId);
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
       .from("Notificaciones")
       .select("*")
-      .eq("usuario_id", sesion.usuario.id)
+      .eq("usuario_id", usuarioId)
       .order("fecha_envio", { ascending: false })
-      .limit(15)
-      .then(({ data, error }) => {
-        if (!error && data) {
-          setNotificaciones(data as Notificacion[]);
+      .limit(15);
+
+    if (error) {
+      return;
+    }
+
+    console.log("[NavRol] Notificaciones cargadas:", data?.length ?? 0, data);
+    setNotificaciones(data ? (data as Notificacion[]) : []);
+  }, [sesion, obtenerUsuarioId]);
+
+  const cargarNotificacionesRef = useRef(cargarNotificaciones);
+  cargarNotificacionesRef.current = cargarNotificaciones;
+  const timerReintentoRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    cargarNotificacionesRef.current();
+  }, [cargarNotificaciones]);
+
+  useEffect(() => {
+    if (!estaSupabaseConfigurado()) return;
+
+    let canal: ReturnType<ReturnType<typeof getSupabaseClient>["channel"]> | null = null;
+    let cancelado = false;
+
+    (async () => {
+      let usuarioId: string | null = null;
+      let rolDetectado: string | null = null;
+
+      if (sesion?.usuario.id) {
+        usuarioId = sesion.usuario.id;
+        rolDetectado = sesion.usuario.rol;
+        console.log("[NavRol] ID y Rol detectado:", { usuarioId, rol: rolDetectado });
+      } else {
+        const supabase = getSupabaseClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user?.email) {
+          const { data: usuario, error } = await supabase
+            .from("Usuarios")
+            .select("id, rol")
+            .eq("email", session.user.email)
+            .single();
+
+          if (!error && usuario) {
+            usuarioId = usuario.id;
+            rolDetectado = usuario.rol;
+            console.log("[NavRol] ID y Rol detectado:", { usuarioId, rol: rolDetectado });
+          }
         }
-      });
+      }
+
+      if (cancelado || !usuarioId) return;
+
+      console.log("[NavRol] Inicializando suscripción Realtime para usuario_id:", usuarioId);
+      cargarNotificacionesRef.current(); // Carga inicial mientras se estabiliza el WebSocket
+      const supabase = getSupabaseClient();
+      const nombreCanal = `notificaciones-${usuarioId}-${Date.now()}`;
+      canal = supabase
+        .channel(nombreCanal)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "Notificaciones",
+          },
+          (payload) => {
+            console.log("[NavRol] Evento Realtime recibido:", payload.eventType, payload);
+            if (payload.eventType === "DELETE") {
+              const oldId = (payload.old as { id: string })?.id;
+              if (oldId) {
+                setNotificaciones((prev) => prev.filter((n) => n.id !== oldId));
+              }
+              return;
+            }
+            const nueva = payload.new as Notificacion;
+            if (nueva.usuario_id === usuarioId) {
+              console.log("[NavRol] Notificación aceptada para usuario_id:", usuarioId);
+              setNotificaciones((prev) => {
+                const yaExiste = prev.some((n) => n.id === nueva.id);
+                if (yaExiste) {
+                  console.log("[NavRol] Notificación ya existe, ignorando duplicado:", nueva.id);
+                  return prev;
+                }
+                return [nueva, ...prev].slice(0, 15);
+              });
+            }
+          }
+        )
+        .subscribe((status, err) => {
+          console.log("[NavRol] Estado suscripción Realtime:", status);
+          if (status === "SUBSCRIBED") {
+            console.log("[NavRol] Realtime conectado correctamente, escuchando cambios en Notificaciones");
+          }
+          if (status === "CHANNEL_ERROR" || status === "CLOSED") {
+            if (!usuarioId || cancelado) return;
+            console.warn(`[NavRol] Canal Realtime ${status === "CLOSED" ? "cerrado" : "con error"}, reintentando en 5s...`);
+            timerReintentoRef.current = setTimeout(() => {
+              if (!cancelado) {
+                cargarNotificacionesRef.current();
+              }
+            }, 5000);
+          }
+          if (status === "TIMED_OUT") {
+            console.error("[NavRol] Canal Realtime agotó el tiempo de espera");
+          }
+          if (err) {
+            console.error("[NavRol] Error en suscripción Realtime:", err);
+          }
+        });
+    })();
+
+    return () => {
+      cancelado = true;
+      if (timerReintentoRef.current) {
+        clearTimeout(timerReintentoRef.current);
+        timerReintentoRef.current = null;
+      }
+      if (canal) {
+        console.log("[NavRol] Limpiando canal Realtime");
+        const supabase = getSupabaseClient();
+        supabase.removeChannel(canal);
+      }
+    };
   }, [sesion]);
 
   useEffect(() => {
-    if (!sesion || !estaSupabaseConfigurado()) return;
+    if (!estaSupabaseConfigurado()) return;
 
-    const supabase = getSupabaseClient();
-    const canal = supabase
-      .channel("notificaciones-nav")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "Notificaciones" },
-        (payload) => {
-          if (payload.eventType === "DELETE") {
-            const oldId = (payload.old as { id: string })?.id;
-            if (oldId) {
-              setNotificaciones((prev) => prev.filter((n) => n.id !== oldId));
-            }
-            return;
-          }
-          const nueva = payload.new as Notificacion;
-          if (nueva.usuario_id === sesion.usuario.id) {
-            setNotificaciones((prev) => [nueva, ...prev.slice(0, 14)]);
-          }
-        }
-      )
-      .subscribe();
+    console.log("[NavRol] Iniciando polling de notificaciones cada 30s");
+    const intervalo = setInterval(() => {
+      console.log("[NavRol] Polling: recargando notificaciones");
+      cargarNotificacionesRef.current();
+    }, 30000);
 
     return () => {
-      supabase.removeChannel(canal);
+      console.log("[NavRol] Deteniendo polling de notificaciones");
+      clearInterval(intervalo);
     };
   }, [sesion]);
+
+  useEffect(() => {
+    if (popoverAbierto) {
+      console.log("[NavRol] Popover abierto, recargando notificaciones");
+      cargarNotificacionesRef.current();
+    }
+  }, [popoverAbierto]);
 
   useEffect(() => {
     function handleClickFuera(e: MouseEvent) {
@@ -243,7 +391,10 @@ export default function NavRol() {
         <div className="relative" ref={popoverRef}>
           <button
             type="button"
-            onClick={() => setPopoverAbierto(!popoverAbierto)}
+            onClick={() => {
+              console.log("[NavRol] Click en campanita. Estado actual:", { notificaciones: notificaciones.length, noLeidas: notificaciones.filter((n) => !n.leida).length, popoverAbierto: !popoverAbierto });
+              setPopoverAbierto(!popoverAbierto);
+            }}
             className="relative rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
           >
             <svg
