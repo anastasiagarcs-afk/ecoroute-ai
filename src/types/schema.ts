@@ -126,12 +126,14 @@ export type Usuario = {
   telefono: string | null;
   zona_asignada: string | null;
   puntos_reciclaje: number;
+  activo: boolean;
   created_at: string;
 }
 
-export type InsertUsuario = Omit<Usuario, "id" | "created_at"> & {
+export type InsertUsuario = Omit<Usuario, "id" | "created_at" | "activo"> & {
   id?: string;
   created_at?: string;
+  activo?: boolean;
 };
 
 export type UpdateUsuario = Partial<Usuario>;

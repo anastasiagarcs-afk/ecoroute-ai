@@ -182,6 +182,29 @@ export async function iniciarSesion(
   const supabase = obtenerCliente();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return { exito: false, error: error.message };
+
+  // Verificar si la cuenta está activa
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) {
+    const { data: usuario, error: queryError } = await supabase
+      .from("Usuarios")
+      .select("activo")
+      .eq("id", session.user.id)
+      .single();
+
+    // Si la consulta falla (columna no existe, RLS, etc.), permitir login
+    if (queryError) {
+      console.warn("[Auth] No se pudo verificar estado activo:", queryError.message);
+    } else if (usuario && !usuario.activo) {
+      // Cerrar sesión si la cuenta está desactivada
+      await supabase.auth.signOut();
+      return {
+        exito: false,
+        error: "Tu cuenta ha sido desactivada por un administrador. Contacta a soporte para reactivar tu acceso."
+      };
+    }
+  }
+
   await refrescarSesion();
   return { exito: true };
 }

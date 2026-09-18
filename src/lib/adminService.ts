@@ -70,3 +70,71 @@ export async function rechazarSolicitud(
   if (error) return { exito: false, error: error.message };
   return { exito: true };
 }
+
+export async function listarUsuarios(): Promise<
+  { exito: boolean; datos?: Usuario[]; error?: string }
+> {
+  const supabase = crearCliente();
+  const { data, error } = await supabase
+    .from("Usuarios")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) return { exito: false, error: error.message };
+  return { exito: true, datos: data ?? [] };
+}
+
+export async function actualizarRolUsuario(
+  usuarioId: string,
+  nuevoRol: RolUsuario
+): Promise<{ exito: boolean; error?: string }> {
+  const supabase = crearCliente();
+  const { error } = await supabase
+    .from("Usuarios")
+    .update({ rol: nuevoRol })
+    .eq("id", usuarioId);
+
+  if (error) return { exito: false, error: error.message };
+  return { exito: true };
+}
+
+export async function actualizarZonaUsuario(
+  usuarioId: string,
+  nuevaZona: string | null
+): Promise<{ exito: boolean; error?: string }> {
+  const supabase = crearCliente();
+  const { error } = await supabase
+    .from("Usuarios")
+    .update({ zona_asignada: nuevaZona })
+    .eq("id", usuarioId);
+
+  if (error) return { exito: false, error: error.message };
+  return { exito: true };
+}
+
+export async function toggleActivoUsuario(
+  usuarioId: string,
+  activo: boolean
+): Promise<{ exito: boolean; error?: string }> {
+  const supabase = crearCliente();
+  const { error } = await supabase
+    .from("Usuarios")
+    .update({ activo })
+    .eq("id", usuarioId);
+
+  if (error) return { exito: false, error: error.message };
+  return { exito: true };
+}
+
+export async function eliminarUsuario(
+  usuarioId: string
+): Promise<{ exito: boolean; error?: string }> {
+  const supabase = crearCliente();
+  const { error } = await supabase
+    .from("Usuarios")
+    .delete()
+    .eq("id", usuarioId);
+
+  if (error) return { exito: false, error: error.message };
+  return { exito: true };
+}

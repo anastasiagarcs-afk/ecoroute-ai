@@ -1,5 +1,5 @@
 # Bitácora del Proyecto — EcoRoute AI
-> Documento generado automáticamente el 17 de septiembre de 2026 a las 10:25 p. m. por `npm run informe`. No editar a mano: se regenera desde el código para mantenerse al día.
+> Documento generado automáticamente el 17 de septiembre de 2026 a las 11:38 p. m. por `npm run informe`. No editar a mano: se regenera desde el código para mantenerse al día.
 > **Nota**: Este archivo es el registro cronológico automático. Para el informe académico formal, ver `INFORME_PROYECTO.md`.
 
 ## 1. Arquitectura y Stack Tecnológico
@@ -57,8 +57,8 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 
 | Módulo | Líneas | Descripción |
 | --- | --- | --- |
-| `src/lib/adminService.ts` | 73 | — |
-| `src/lib/authService.ts` | 233 | — |
+| `src/lib/adminService.ts` | 141 | — |
+| `src/lib/authService.ts` | 256 | — |
 | `src/lib/contenedoresStore.ts` | 769 | Almacén de contenedores: carga y semilla desde Supabase, normalización de ubicación (objeto, GeoJSON, EWKT o WKB/EWKB hexadecimal con parseFloat), datos de respaldo en localStorage y registro, vaciado (0% y estado vacio), edición y eliminación en tiempo real. |
 | `src/lib/gamificacion.ts` | 190 | Lógica pura de gamificación: puntos por kg según material, niveles de ciudadano, progreso y catálogo de recompensas. |
 | `src/lib/geminiPredictiveService.ts` | 356 | Servicio predictivo con IA (HU-11/RF-24): obtiene el histórico de LecturasSensores desde Supabase (o sintetiza lecturas cuando no hay datos), ajusta un modelo de regresión lineal, consume opcionalmente la API de Gemini (NEXT_PUBLIC_GEMINI_API_KEY) y genera alertas predictivas que se persisten en la tabla Notificaciones (tipo 'alerta_predictiva'). |
@@ -100,8 +100,12 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 - `supabase/migrations/20_rutas_geometria.sql`
 - `supabase/migrations/21_add_enum_asignacion_ruta.sql`
 - `supabase/migrations/22_rpc_completar_ruta.sql`
+- `supabase/migrations/23_admin_gestion_usuarios.sql`
+- `supabase/migrations/24_fix_usuarios_rls.sql`
+- `supabase/migrations/25_usuarios_delete_admin.sql`
+- `supabase/migrations/26_fix_usuarios_insert_policy.sql`
 
-Total de políticas RLS habilitadas en migraciones: 44.
+Total de políticas RLS habilitadas en migraciones: 53.
 
 ### Tablas
 

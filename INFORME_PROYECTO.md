@@ -101,8 +101,8 @@ Los requerimientos se derivaron de las Historias de Usuario (HU-01…HU-15) y se
 | RF-17 | Dashboard gerencial con KPIs (contenedores, promedio, rutas, toneladas) | HU-09 | Alta | 🟢 Completado | `DashboardGerencial.tsx` (tarjetas `TarjetaKpi`) |
 | RF-18 | Filtros por zona y fechas en el dashboard gerencial | HU-09 | Media | 🟢 Completado | `DashboardGerencial.tsx` (select de zona + rango de fechas) |
 | RF-19 | Reportes exportables (CSV/PDF) con filtros por fecha y zona | HU-10 | Media | 🟢 Completado | `reporteExportador.ts` (`descargarCSV`, `imprimirReporte`) |
-| RF-20 | Gestión de roles y permisos (Admin/Gerente/Operador/Ciudadano) | HU-12 | Alta | 🟢 Completado | `rolesAutorizados.ts` (`puede()`, `PERMISOS`); gates en componentes |
-| RF-21 | Solicitud de acceso y aprobación/rechazo por Admin | HU-13 | Media | 🟢 Completado | `authService.ts`, `adminService.ts`; `app/acceso/page.tsx`; RPC `aprobar_solicitud_acceso` |
+| RF-20 | Gestión de roles y permisos (Admin/Gerente/Operador/Ciudadano) | HU-12 | Alta | 🟢 Completado | `rolesAutorizados.ts` (`puede()`, `PERMISOS`); `app/admin/page.tsx` (sub-pestañas, cambio de rol, toggle activo/inactivo) |
+| RF-21 | Solicitud de acceso y aprobación/rechazo por Admin | HU-13 | Media | 🟢 Completado | `authService.ts`, `adminService.ts`; `app/admin/page.tsx` (sub-pestaña Solicitudes Pendientes, botones Aprobar/Rechazar); RPC `aprobar_solicitud_acceso` |
 | RF-22 | Detección de anomalías en sensores (comparar nivel real vs. esperado) | HU-15 | Media | 🔴 No Implementado | Tabla `LecturasSensores` existe, pero sin lógica de detección de desviaciones |
 | RF-23 | Análisis de desviaciones estadísticas (sensores sospechosos >7 días) | HU-15 | Media | 🔴 No Implementado | Sin implementación; HU-15 está pendiente |
 | RF-24 | Guías de separación por material (acceso público sin login) | HU-07 | Alta | 🟢 Completado | `SeparacionGuia.tsx`; ruta `/separacion` (pública) |
