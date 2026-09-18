@@ -3,7 +3,10 @@ import {
   getSupabaseClient,
 } from "@/lib/supabaseClient";
 import { aIntervalo } from "@/lib/historialRutas";
-import { marcarRutaFinalizadaIncompleta } from "@/lib/operadoresService";
+import {
+  marcarRutaFinalizadaIncompleta,
+  obtenerRutasJornadaActual,
+} from "@/lib/operadoresService";
 import type { Contenedor, EstadoRuta, HistorialRuta, InsertHistorialRuta, Ruta, UpdateRuta } from "@/types/schema";
 
 export interface DetalleRutaJornada {
@@ -11,11 +14,13 @@ export interface DetalleRutaJornada {
   rutaId: string;
   distanciaKm: number;
   contenedoresCount: number;
+  contenedoresIds: string[];
   fecha: string;
   estado: string;
 }
 
 export interface ResumenJornada {
+  fecha_inicio: string;
   fecha: string;
   rutasEjecutadas: number;
   rutasEnProceso: number;
@@ -24,6 +29,7 @@ export interface ResumenJornada {
   tiempoTotalMinutos: number;
   combustibleEstimadoLitros: number;
   rutas: DetalleRutaJornada[];
+  tipo_cierre: "parcial" | "final";
 }
 
 const CONSUMO_COMBUSTIBLE_POR_KM = 0.12;
@@ -37,33 +43,38 @@ function esMismaFecha(fechaIso: string, fechaRef: Date): boolean {
   );
 }
 
-function parsearTiempoEstimado(tiempo: string | null): number {
-  if (!tiempo) return 0;
-  const match = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$/.exec(tiempo);
-  if (!match) return 0;
-  const horas = Number(match[1] ?? 0);
-  const mins = Number(match[2] ?? 0);
-  return horas * 60 + mins;
-}
-
 const ESTADOS_FINALES = new Set(["completada", "cancelada", "finalizada_incompleta"]);
 
 export function calcularResumenJornada(
   rutas: Ruta[],
-  _contenedores: Contenedor[]
+  _contenedores: Contenedor[],
+  fecha_inicio: string = new Date().toISOString(),
+  tipo_cierre: "parcial" | "final" = "parcial"
 ): ResumenJornada {
   const hoy = new Date();
+  const inicioJornada = new Date(fecha_inicio);
 
   const rutasDelDia = (() => {
-    const hoyRutas = rutas.filter(
-      (r) => r.fecha_creacion && esMismaFecha(r.fecha_creacion, hoy)
-    );
-    if (hoyRutas.length > 0) return hoyRutas;
-    return rutas.filter((r) => r.estado !== "rechazada");
+    if (rutas.length === 0) return [];
+
+    return rutas.filter((r) => {
+      // Rutas activas siempre pertenecen a la jornada actual
+      if (r.estado === "aceptada" || r.estado === "en_progreso") {
+        return true;
+      }
+
+      // Rutas finalizadas: filtrar por fecha_inicio de la jornada
+      if (r.ultima_ejecucion) {
+        return new Date(r.ultima_ejecucion) >= inicioJornada;
+      }
+
+      // Fallback por día actual
+      if (!r.fecha_creacion) return false;
+      return esMismaFecha(r.fecha_creacion, hoy);
+    });
   })();
 
   let kmTotales = 0;
-  let tiempoTotalMinutos = 0;
   const contenedoresSet = new Set<string>();
 
   let rutasEjecutadas = 0;
@@ -73,10 +84,8 @@ export function calcularResumenJornada(
 
   for (const ruta of rutasDelDia) {
     const km = ruta.distancia_total ?? 0;
-    const tiempo = parsearTiempoEstimado(ruta.tiempo_estimado);
 
     kmTotales += km;
-    tiempoTotalMinutos += tiempo;
 
     for (const cid of ruta.contenedores_asignados ?? []) {
       contenedoresSet.add(cid);
@@ -93,24 +102,71 @@ export function calcularResumenJornada(
       rutaId: ruta.id,
       distanciaKm: Math.round(km * 100) / 100,
       contenedoresCount: (ruta.contenedores_asignados ?? []).length,
+      contenedoresIds: ruta.contenedores_asignados ?? [],
       fecha: ruta.ultima_ejecucion ?? ruta.fecha_creacion,
       estado: ruta.estado,
     });
   }
 
+  // Calcular tiempo real transcurrido desde el inicio de la jornada
+  const tiempoTranscurridoMs = Math.max(0, hoy.getTime() - inicioJornada.getTime());
+  const tiempoTotalMinutos = Math.round(tiempoTranscurridoMs / 60000);
+
   const combustibleEstimadoLitros =
     Math.round(kmTotales * CONSUMO_COMBUSTIBLE_POR_KM * 100) / 100;
 
   return {
+    fecha_inicio,
     fecha: hoy.toISOString(),
     rutasEjecutadas,
     rutasEnProceso,
     kmTotales: Math.round(kmTotales * 100) / 100,
     contenedoresVaciados: contenedoresSet.size,
-    tiempoTotalMinutos: Math.round(tiempoTotalMinutos),
+    tiempoTotalMinutos,
     combustibleEstimadoLitros,
     rutas: detalleRutas,
+    tipo_cierre,
   };
+}
+
+export async function calcularResumenJornadaFinal(
+  operadorId: string,
+  contenedores: Contenedor[],
+  fechaInicioJornada: string
+): Promise<ResumenJornada> {
+  // 1. Obtener cierres previos del día para encontrar el inicio más antiguo
+  const cierresPrevios = await obtenerResumenesJornada(operadorId);
+  const hoyStr = new Date().toDateString();
+  const cierresHoy = cierresPrevios.filter(
+    (c) => new Date(c.fecha_ejecucion).toDateString() === hoyStr
+  );
+
+  const fechaInicioMasAntigua =
+    cierresHoy
+      .filter((c) => c.fecha_inicio)
+      .map((c) => c.fecha_inicio!)
+      .sort()[0] ?? fechaInicioJornada;
+
+  // 2. Obtener TODAS las rutas asignadas hoy (sin filtro de fechaInicioJornada)
+  const rutasHoy = await obtenerRutasJornadaActual(operadorId);
+
+  // 3. Calcular resumen total del día
+  const resumen = calcularResumenJornada(
+    rutasHoy,
+    contenedores,
+    fechaInicioMasAntigua,
+    "final"
+  );
+
+  // 4. Para el cierre final, las rutas activas se consideran ejecutadas
+  //    (serán marcadas como finalizadas incompletas al guardar)
+  const rutasActivas = resumen.rutas.filter(
+    (r) => r.estado === "aceptada" || r.estado === "en_progreso"
+  );
+  resumen.rutasEjecutadas += rutasActivas.length;
+  resumen.rutasEnProceso = 0;
+
+  return resumen;
 }
 
 export async function cerrarJornada(datos: {
@@ -128,6 +184,8 @@ export async function cerrarJornada(datos: {
 
   const observaciones = JSON.stringify({
     tipo: "cierre_jornada",
+    subtipo: resumen.tipo_cierre,
+    fecha_inicio: resumen.fecha_inicio,
     rutasEjecutadas: resumen.rutasEjecutadas,
     rutasEnProceso: resumen.rutasEnProceso,
     combustibleEstimado: resumen.combustibleEstimadoLitros,
@@ -135,7 +193,7 @@ export async function cerrarJornada(datos: {
 
   const contenedoresRecogidos = resumen.rutas
     .filter((r) => r.estado === "completada")
-    .flatMap((r) => Array(r.contenedoresCount).fill(""));
+    .flatMap((r) => r.contenedoresIds);
 
   const valores: InsertHistorialRuta = {
     ruta_id: null,
@@ -171,15 +229,18 @@ export async function cerrarJornada(datos: {
     );
   }
 
-  for (const ruta of resumen.rutas) {
-    if (!ESTADOS_FINALES.has(ruta.estado)) {
-      try {
-        await marcarRutaFinalizadaIncompleta(ruta.rutaId);
-      } catch (err) {
-        console.warn(
-          `[EcoRoute] No se pudo marcar ruta ${ruta.rutaId} como finalizada incompleta:`,
-          err instanceof Error ? err.message : err
-        );
+  // Solo marcar rutas pendientes como finalizadas incompletas en cierre FINAL
+  if (resumen.tipo_cierre === "final") {
+    for (const ruta of resumen.rutas) {
+      if (!ESTADOS_FINALES.has(ruta.estado)) {
+        try {
+          await marcarRutaFinalizadaIncompleta(ruta.rutaId);
+        } catch (err) {
+          console.warn(
+            `[EcoRoute] No se pudo marcar ruta ${ruta.rutaId} como finalizada incompleta:`,
+            err instanceof Error ? err.message : err
+          );
+        }
       }
     }
   }
@@ -188,10 +249,12 @@ export async function cerrarJornada(datos: {
 export interface ResumenJornadaGuardado {
   id: string;
   fecha_ejecucion: string;
+  fecha_inicio: string | null;
   kmTotales: number;
   tiempoReal: string | null;
   combustibleConsumido: number | null;
   rutasEjecutadas: number;
+  tipo_cierre: "parcial" | "final";
 }
 
 export async function obtenerResumenesJornada(
@@ -221,19 +284,27 @@ export async function obtenerResumenesJornada(
       })
       .map((row: HistorialRuta) => {
         let rutasEjecutadas = 0;
+        let tipo_cierre: "parcial" | "final" = "final";
+        let fecha_inicio: string | null = null;
         try {
           const obs = JSON.parse(row.observaciones ?? "{}");
           rutasEjecutadas = obs.rutasEjecutadas ?? 0;
+          if (obs.subtipo === "parcial" || obs.subtipo === "final") {
+            tipo_cierre = obs.subtipo;
+          }
+          fecha_inicio = obs.fecha_inicio ?? null;
         } catch {
           /* ignore */
         }
         return {
           id: row.id,
           fecha_ejecucion: row.fecha_ejecucion,
+          fecha_inicio,
           kmTotales: row.distancia_total ?? 0,
           tiempoReal: row.tiempo_real,
           combustibleConsumido: row.combustible_consumido,
           rutasEjecutadas,
+          tipo_cierre,
         };
       });
   } catch {

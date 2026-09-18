@@ -16,6 +16,7 @@ EcoRoute AI monitorea contenedores de residuos en Ciudad Guayana, genera rutas �
 - **Separación en la fuente**: guías interactivas por material, públicas y sin login.
 - **Registro de reciclaje y gamificación**: puntos por kg según material, niveles de ciudadano, catálogo de recompensas e historial de entregas.
 - **Integración con n8n** vía webhook para el registro de reciclaje (fallback automático a Supabase).
+- **Gestión de jornada del operador**: cierre parcial (mantiene tiempo activo) y cierre final (consolida métricas diarias), con diferenciación en el historial y bypass RLS mediante RPC para completar rutas.
 - **Notificaciones toast** (éxito / error / info) sobre el mapa.
 
 ## Stack tecnológico
@@ -38,7 +39,7 @@ EcoRoute AI monitorea contenedores de residuos en Ciudad Guayana, genera rutas �
 │   ├── components/         # 12 componentes modulares (mapa, modales, paneles, toasts)
 │   ├── lib/                # Lógica de negocio (contenedores, rutas, reciclaje, n8n, toasts)
 │   └── types/schema.ts     # Modelo tipado de datos + tipos de Supabase
-├── supabase/migrations/    # 7 migraciones SQL idempotentes
+├── supabase/migrations/    # 22+ migraciones SQL idempotentes
 ├── scripts/                # scripts/generar-informe.mjs (regenera BITACORA.md)
 ├── docs/screenshots/       # Capturas para el informe académico
 ├── PLAN_PROYECTO.md        # Plan de trabajo y sprints
@@ -98,8 +99,9 @@ npm run build      # compilación de producción
 | --- | --- | --- |
 | 1 | Base de datos, mapas y monitoreo de contenedores | ✅ Completado |
 | 2 | Optimización de rutas (OSRM), historial y persistencia | ✅ Completado |
-| 3 | Separación en la fuente, reciclaje y gamificación | 🟡 En desarrollo (falta HU-09) |
-| 4 | Analítica, IA predictiva (Gemini), notificaciones y entrega | ⛔ Pendiente |
+| 3 | Separación en la fuente, reciclaje, gamificación y dashboard gerencial | ✅ Completado |
+| 4 | Analítica, IA predictiva (Gemini), reportes y notificaciones | ✅ Completado |
+| 5 | Roles, solicitudes de acceso y cierre de jornada del operador | ✅ Completado |
 
 Ver `PLAN_PROYECTO.md` e `INFORME_PROYECTO.md` para el detalle de requerimientos (RF/RNF), historias de usuario y arquitectura.
 

@@ -14,8 +14,13 @@ import { useContenedores } from "@/hooks/useContenedores";
 import { estaSupabaseConfigurado } from "@/lib/supabaseClient";
 import { obtenerSnapshotSesion } from "@/lib/authService";
 import { puede } from "@/lib/rolesAutorizados";
-import { obtenerRutasActivasOperador, marcarRutaEnProgreso } from "@/lib/operadoresService";
-import { cerrarJornada, calcularResumenJornada, type ResumenJornada } from "@/lib/jornadaService";
+import { obtenerRutasActivasOperador, obtenerRutasJornadaActual, marcarRutaEnProgreso } from "@/lib/operadoresService";
+import {
+  cerrarJornada,
+  calcularResumenJornada,
+  calcularResumenJornadaFinal,
+  type ResumenJornada,
+} from "@/lib/jornadaService";
 import { mostrarToast } from "@/lib/toastStore";
 import type { Ruta, UbicacionPunto } from "@/types/schema";
 
@@ -31,6 +36,10 @@ export default function Home() {
   const [cierreJornadaVisible, setCierreJornadaVisible] = useState(false);
   const [resumenJornada, setResumenJornada] = useState<ResumenJornada | null>(null);
   const [guardandoJornada, setGuardandoJornada] = useState(false);
+  const [fechaInicioJornada, setFechaInicioJornada] = useState<string>(() => {
+    if (typeof window === "undefined") return new Date().toISOString();
+    return localStorage.getItem("ecoroute:jornada:inicio") ?? new Date().toISOString();
+  });
 
   const { contenedores, estado: estadoContenedores } = useContenedores();
 
@@ -66,8 +75,15 @@ export default function Home() {
   useEffect(() => {
     if (sesion?.rol !== "Operador" || !sesion.usuario?.id) return;
 
-    cargarRutasOperador();
-  }, [sesion, cargarRutasOperador]);
+    // Cargar rutas activas del operador
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void cargarRutasOperador();
+
+    // Asegurar que localStorage tenga un timestamp de inicio de jornada
+    if (!localStorage.getItem("ecoroute:jornada:inicio")) {
+      localStorage.setItem("ecoroute:jornada:inicio", fechaInicioJornada);
+    }
+  }, [sesion, cargarRutasOperador, fechaInicioJornada]);
 
   const contenedoresVisibles =
     estadoContenedores.estadoCarga === "cargando" ? [] : contenedores;
@@ -75,11 +91,64 @@ export default function Home() {
   const datosRespaldo =
     !estaSupabaseConfigurado() || estadoContenedores.estadoCarga === "error";
 
-  const handleCerrarJornada = useCallback(() => {
-    const resumen = calcularResumenJornada(rutasActivasOperador, contenedores);
-    setResumenJornada(resumen);
-    setCierreJornadaVisible(true);
-  }, [rutasActivasOperador, contenedores]);
+  const handleCerrarJornada = useCallback(
+    async (tipoCierre: "parcial" | "final") => {
+      if (!sesion?.usuario?.id) return;
+
+      let resumen: ResumenJornada;
+
+      if (tipoCierre === "parcial") {
+        // Cierre parcial: solo rutas desde fechaInicioJornada
+        const rutasJornada = await obtenerRutasJornadaActual(
+          sesion.usuario.id,
+          fechaInicioJornada
+        );
+
+        console.log(
+          "[EcoRoute] Cierre parcial - rutas del segmento:",
+          rutasJornada.length,
+          "| estados:",
+          rutasJornada.map((r) => r.estado)
+        );
+        console.log("[EcoRoute] Fecha inicio de jornada:", fechaInicioJornada);
+
+        resumen = calcularResumenJornada(
+          rutasJornada,
+          contenedores,
+          fechaInicioJornada,
+          "parcial"
+        );
+      } else {
+        // Cierre final: total acumulado del día
+        resumen = await calcularResumenJornadaFinal(
+          sesion.usuario.id,
+          contenedores,
+          fechaInicioJornada
+        );
+
+        console.log(
+          "[EcoRoute] Cierre final - total del día:",
+          resumen.rutasEjecutadas,
+          "rutas ·",
+          resumen.kmTotales.toFixed(1),
+          "km ·",
+          resumen.tiempoTotalMinutos,
+          "min"
+        );
+      }
+
+      console.log("[EcoRoute] Resumen calculado:", {
+        rutasEjecutadas: resumen.rutasEjecutadas,
+        rutasEnProceso: resumen.rutasEnProceso,
+        tiempoTotalMinutos: resumen.tiempoTotalMinutos,
+        tipoCierre: resumen.tipo_cierre,
+      });
+
+      setResumenJornada(resumen);
+      setCierreJornadaVisible(true);
+    },
+    [sesion, contenedores, fechaInicioJornada]
+  );
 
   const handleConfirmarCierre = useCallback(async () => {
     if (!resumenJornada || !sesion?.usuario?.id) return;
@@ -89,17 +158,43 @@ export default function Home() {
         operador_id: sesion.usuario.id,
         resumen: resumenJornada,
       });
-      mostrarToast("Jornada cerrada", "El resumen de la jornada fue guardado correctamente.", "exito");
+
+      const esCierreFinal = resumenJornada.tipo_cierre === "final";
+      const mensaje = esCierreFinal
+        ? "Jornada cerrada. Turno finalizado."
+        : "Cierre parcial guardado. Puedes continuar trabajando.";
+
+      mostrarToast(
+        esCierreFinal ? "Cierre Final" : "Cierre Parcial",
+        mensaje,
+        "exito"
+      );
+
       setCierreJornadaVisible(false);
       setResumenJornada(null);
       setRutaSeleccionadaId(null);
+
+      if (esCierreFinal) {
+        // Reiniciar todo para una nueva jornada
+        const nuevaFechaInicio = new Date().toISOString();
+        localStorage.setItem("ecoroute:jornada:inicio", nuevaFechaInicio);
+        setFechaInicioJornada(nuevaFechaInicio);
+      }
+      // En cierre parcial: mantener fechaInicioJornada para continuidad
+
       cargarRutasOperador();
     } catch {
       mostrarToast("Error", "No se pudo guardar el cierre de jornada.", "error");
     } finally {
       setGuardandoJornada(false);
     }
-  }, [resumenJornada, sesion, cargarRutasOperador, setRutaSeleccionadaId]);
+  }, [
+    resumenJornada,
+    sesion,
+    cargarRutasOperador,
+    setRutaSeleccionadaId,
+    setFechaInicioJornada,
+  ]);
 
   if (!sesion) {
     return (
@@ -309,13 +404,23 @@ export default function Home() {
           </button>
 
           <button
-            onClick={handleCerrarJornada}
-            className="ml-auto flex items-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-amber-700"
+            onClick={() => handleCerrarJornada("parcial")}
+            className="ml-auto flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-400 dark:hover:bg-amber-900/40"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Cierre Parcial
+          </button>
+
+          <button
+            onClick={() => handleCerrarJornada("final")}
+            className="flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-amber-700"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            Cerrar Jornada del Día
+            Cierre Final
           </button>
         </div>
       )}
@@ -364,7 +469,7 @@ export default function Home() {
                   ) : (
                     <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900 text-center">
                       <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                        Ninguna ruta seleccionada. Presiona "Continuar Ruta" en el panel inferior para cargar el itinerario.
+                        Ninguna ruta seleccionada. Presiona &quot;Continuar Ruta&quot; en el panel inferior para cargar el itinerario.
                       </p>
                     </div>
                   )}

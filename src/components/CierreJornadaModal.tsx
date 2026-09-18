@@ -67,6 +67,7 @@ export default function CierreJornadaModal({
   guardando,
 }: CierreJornadaModalProps) {
   const tieneRutas = (resumen?.rutas?.length ?? 0) > 0;
+  const esFinal = resumen?.tipo_cierre === "final";
 
   return (
     <div
@@ -77,9 +78,9 @@ export default function CierreJornadaModal({
     >
       <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-zinc-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
         <div className="mb-5 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-900/30">
+          <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${esFinal ? "bg-emerald-100 dark:bg-emerald-900/30" : "bg-amber-100 dark:bg-amber-900/30"}`}>
             <svg
-              className="h-5 w-5 text-amber-600 dark:text-amber-400"
+              className={`h-5 w-5 ${esFinal ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}
               fill="none"
               viewBox="0 0 24 24"
               strokeWidth={2}
@@ -88,7 +89,7 @@ export default function CierreJornadaModal({
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                d="M12 6v6l4 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                d={esFinal ? "M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" : "M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"}
               />
             </svg>
           </div>
@@ -97,12 +98,23 @@ export default function CierreJornadaModal({
               id="titulo-cierre-jornada"
               className="text-lg font-semibold text-zinc-900 dark:text-zinc-50"
             >
-              Cierre de Jornada
+              {esFinal ? "Cierre Final de Jornada" : "Cierre Parcial de Jornada"}
             </h2>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
               {formatearFecha(resumen?.fecha)}
             </p>
           </div>
+        </div>
+
+        <div className="mb-4 flex flex-wrap gap-2">
+          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${esFinal ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"}`}>
+            {esFinal ? "Cierre Final Diario" : "Cierre Parcial / Intermedio"}
+          </span>
+          {esFinal && (
+            <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+              Total acumulado del día
+            </span>
+          )}
         </div>
 
         {!tieneRutas ? (
@@ -235,9 +247,13 @@ export default function CierreJornadaModal({
             type="button"
             onClick={onConfirmar}
             disabled={guardando}
-            className="rounded-xl bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-40"
+            className={`rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${esFinal ? "bg-emerald-600 hover:bg-emerald-700" : "bg-amber-600 hover:bg-amber-700"}`}
           >
-            {guardando ? "Guardando…" : "Confirmar Cierre"}
+            {guardando
+              ? "Guardando…"
+              : esFinal
+                ? "Confirmar Cierre Final"
+                : "Guardar Cierre Parcial"}
           </button>
         </div>
       </div>

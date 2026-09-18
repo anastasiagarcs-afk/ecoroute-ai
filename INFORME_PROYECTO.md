@@ -108,12 +108,17 @@ Los requerimientos se derivaron de las Historias de Usuario (HU-01…HU-15) y se
 | RF-24 | Alertas predictivas por IA (Gemini API) | HU-11 | Alta | **Implementado** | `geminiPredictiveService.ts` (análisis con Gemini + heurística, lecturas de `LecturasSensores`, notificación de riesgo) |
 | RF-25 | Gestión de roles y permisos (Admin/Operador/Ciudadano) | HU-12 | Alta | **Implementado** | `rolesAutorizados.ts` (`puede()`); gates en `DashboardGerencial.tsx`, `RoutesMapView.tsx`; migración `09_roles_y_solicitudes_acceso_rls.sql` |
 | RF-26 | Solicitud de acceso y aprobación (pendiente/aprobado/rechazado) | HU-13 | Media | **Implementado** | `authService.ts` (`registrarCuenta`, `enviarSolicitudAcceso`, `aprobarSolicitud`); `app/acceso/page.tsx` (stepper 2 pasos); tabla `SolicitudesAcceso` + RPC |
-| RF-27 | Cierre de jornada (consolidar km, rutas, combustible, contenedores) | HU-14 | Media | **Pendiente** | La tabla `HistorialRutas` ya almacena los datos base |
-| RF-28 | Detección de anomalías en sensores | HU-15 | Media | **Pendiente** | Tabla `LecturasSensores` lista para el cálculo |
-| RF-29 | Notificaciones visuales (toasts) | HU-06, HU-08 | Media | **Implementado** | `toastStore.ts`; `ToastHost.tsx` (éxito/error/info) |
-| RF-30 | Integración con webhook n8n para registro de reciclaje | HU-08 | Media | **Implementado** | `n8nWebhook.ts`; `reciclajeService.ts:189` |
-| RF-31 | Persistencia del historial de rutas ejecutadas | HU-04, HU-05 | Alta | **Implementado** | `historialRutas.ts:282` (Supabase + localStorage) |
-| RF-32 | Modo de respaldo local (offline) | Transversal | Alta | **Implementado** | `contenedoresStore.ts:382-407`; `historialRutas.ts:226-243` |
+| RF-27 | Cierre de jornada con dos botones explícitos (parcial / final) | HU-14 | Media | **Implementado** | `app/page.tsx` botones "Cierre Parcial" y "Cierre Final"; `jornadaService.ts:calcularResumenJornada`; `cerrarJornada` |
+| RF-28 | Diferenciar cierre parcial vs. cierre final en historial | HU-14 | Media | **Implementado** | `jornadaService.ts:ResumenJornada.tipo_cierre`; `HistorialOperador.tsx:badgeTipoCierre` |
+| RF-29 | Mantener tiempo activo de jornada tras cierre parcial | HU-14 | Media | **Implementado** | `app/page.tsx:fechaInicioJornada` (localStorage); `jornadaService.ts:calcularResumenJornada` |
+| RF-30 | Aislamiento de métricas tras cierre final | HU-14 | Media | **Implementado** | `operadoresService.ts:obtenerRutasJornadaActual`; `jornadaService.ts:calcularResumenJornadaFinal` |
+| RF-31 | Completar ruta sin bloqueos RLS mediante RPC | HU-14 | Alta | **Implementado** | `operadoresService.ts:marcarRutaCompletada`; `supabase/migrations/22_rpc_completar_ruta.sql` |
+| RF-32 | Historial del operador en dos columnas (jornadas + rutas) | HU-14 | Media | **Implementado** | `HistorialOperador.tsx` layout `lg:grid-cols-2` |
+| RF-33 | Notificaciones visuales (toasts) | HU-06, HU-08 | Media | **Implementado** | `toastStore.ts`; `ToastHost.tsx` (éxito/error/info) |
+| RF-34 | Integración con webhook n8n para registro de reciclaje | HU-08 | Media | **Implementado** | `n8nWebhook.ts`; `reciclajeService.ts:189` |
+| RF-35 | Persistencia del historial de rutas ejecutadas | HU-04, HU-05 | Alta | **Implementado** | `historialRutas.ts:282` (Supabase + localStorage) |
+| RF-36 | Modo de respaldo local (offline) | Transversal | Alta | **Implementado** | `contenedoresStore.ts:382-407`; `historialRutas.ts:226-243` |
+| RF-37 | Detección de anomalías en sensores | HU-15 | Media | **Pendiente** | Tabla `LecturasSensores` lista para el cálculo |
 
 ### b.2 Requerimientos No Funcionales (RNF-01…RNF-14)
 
@@ -145,17 +150,17 @@ Matriz consolidada de las **15 historias de usuario** del proyecto con su rol, d
 | **HU-01** | Gestión de Contenedores | Administrador | Registrar, modificar y eliminar contenedores en el sistema. | CRUD completo; validación GPS; actualización en mapa en tiempo real. | RF-01, RF-02, RF-03, RF-04 | ✅ Implementado |
 | **HU-02** | Visualización en Mapa | Operador | Visualizar en un mapa interactivo todos los contenedores con su nivel de llenado. | Marcadores por color (<50% verde, 50–80% amarillo, >80% rojo); actualización cada 5 min. | RF-04, RF-05, RF-06, RF-08 | ✅ Implementado |
 | **HU-03** | Consulta de Contenedores | Operador | Consultar el nivel de llenado actual de un contenedor específico. | Popup con ID, ubicación, tipo de residuo, nivel (%) y última lectura. | RF-07 | ✅ Implementado |
-| **HU-04** | Optimización de Rutas | Administrador | Generar una ruta óptima basada en los contenedores con mayor nivel de llenado. | Algoritmo TSP heurístico; prioriza llenado >80%; muestra distancia total y tiempo. | RF-09, RF-10, RF-11, RF-31 | ✅ Implementado |
+| **HU-04** | Optimización de Rutas | Administrador | Generar una ruta óptima basada en los contenedores con mayor nivel de llenado. | Algoritmo TSP heurístico; prioriza llenado >80%; muestra distancia total y tiempo. | RF-09, RF-10, RF-11, RF-35 | ✅ Implementado |
 | **HU-05** | Visualización de Rutas | Operador | Visualizar la ruta generada en el mapa para seguir el recorrido asignado. | Polilínea sobre mapa; resalta contenedor actual y siguiente. | RF-12, RF-13 | ✅ Implementado |
-| **HU-06** | Alertas de Llenado | Administrador | Recibir alerta visual cuando un contenedor supere el 80% de su capacidad. | Lista de críticos en dashboard; notificación emergente; opción «atendido». | RF-14, RF-15, RF-29 | ✅ Implementado |
+| **HU-06** | Alertas de Llenado | Administrador | Recibir alerta visual cuando un contenedor supere el 80% de su capacidad. | Lista de críticos en dashboard; notificación emergente; opción «atendido». | RF-14, RF-15, RF-33 | ✅ Implementado |
 | **HU-07** | Guías de Separación | Ciudadano | Consultar guías visuales de separación de residuos por material. | Contenido estático visual; acceso público sin login. | RF-16 | ✅ Implementado |
-| **HU-08** | Registro de Reciclaje | Ciudadano | Registrar reciclajes exitosos y acumular puntos de recompensa. | Formulario por kg; sumatoria automática de puntos; historial visible. | RF-17, RF-18, RF-19, RF-20, RF-30 | ✅ Implementado |
+| **HU-08** | Registro de Reciclaje | Ciudadano | Registrar reciclajes exitosos y acumular puntos de recompensa. | Formulario por kg; sumatoria automática de puntos; historial visible. | RF-17, RF-18, RF-19, RF-20, RF-34 | ✅ Implementado |
 | **HU-09** | Dashboard Gerencial | Gerente | Visualizar dashboard con indicadores clave (contenedores, promedio, rutas, toneladas). | Gráficos y tarjetas en tiempo real; filtros por zona y fechas. | RF-21, RF-22 | ✅ Implementado |
 | **HU-10** | Reportes Exportables | Gerente | Generar reportes automáticos exportables (Excel/PDF) del historial de rutas. | Exportación con filtros por fecha y zona; formato profesional. | RF-23 | ✅ Implementado |
 | **HU-11** | Alertas Predictivas (IA) | Gerente | Recibir alertas predictivas (IA) sobre contenedores que alcanzarán capacidad máxima. | Integración con Gemini API; alerta si la probabilidad >85% en <4 horas. | RF-24 | ✅ Implementado |
 | **HU-12** | Gestión de Roles | Administrador | Gestionar roles y permisos (Admin, Operador, Ciudadano). | Supabase Auth + RLS; asignación exclusiva por Admin; gates por rol en dashboard y mapa. | RF-25 | ✅ Implementado |
 | **HU-13** | Solicitud de Acceso | Operador | Registrarse y solicitar acceso al sistema para aprobación. | Registro email/password → solicitud de rol (Gerente/Operador); Admin aprueba/rechaza vía RPC. | RF-26 | ✅ Implementado |
-| **HU-14** | Cierre de Jornada | Operador | Registrar el cierre de jornada con el detalle de rutas ejecutadas. | Botón «Cerrar Jornada» que consolida km, rutas, combustible y contenedores atendidos. | RF-27 | ⛔ Pendiente |
+| **HU-14** | Cierre de Jornada | Operador | Registrar el cierre de jornada con el detalle de rutas ejecutadas, diferenciando cierre parcial y final, y completando rutas sin bloqueos RLS. | Dos botones explícitos: «Cierre Parcial» guarda métricas del segmento y mantiene la jornada activa; «Cierre Final» consolida el total del día, reinicia `fecha_inicio` y permite continuar trabajando; historial en dos columnas distingue cada tipo. | RF-27, RF-28, RF-29, RF-30, RF-31, RF-32 | ✅ Implementado |
 | **HU-15** | Detección de Anomalías | Gerente | Comparar nivel real vs. esperado para detectar sensores descalibrados. | Cálculo de desviaciones estadísticas; alerta por datos anómalos (>7 días constante). | RF-28 | ⛔ Pendiente |
 
 **Leyenda**: ✅ Implementado · 🟡 Parcial · ⛔ Pendiente
@@ -234,13 +239,57 @@ useCaseDiagram
     actor "Operador" as Oper
     Oper --> (Visualizar mapa de contenedores)
     Oper --> (Consultar detalle del contenedor)
-    Oper --> (Generar ruta óptima)
+    Oper --> (Seleccionar ruta asignada y marcarla en progreso)
+    Oper --> (Completar ruta sin bloqueos RLS)
     Oper --> (Visualizar ruta en el mapa)
     Oper --> (Vaciar contendores atendidos)
     Oper --> (Registrar historial de rutas ejecutadas)
     Oper --> (Solicitar acceso al sistema)
-    Oper --> (Cerrar jornada)
+    Oper --> (Cerrar jornada parcial)
+    Oper --> (Cerrar jornada final consolidada)
+    Oper --> (Consultar historial unificado sin mapa)
 ```
+
+#### CU-OP-01 — Gestión de Tiempo y Continuidad de Jornada
+
+| Campo | Descripción |
+| --- | --- |
+| **Actor** | Operador |
+| **Precondición** | Operador autenticado con sesión activa |
+| **Flujo principal** | 1. Al iniciar sesión, el sistema registra `fecha_inicio` en `localStorage`.<br>2. El operador completa rutas y los contadores se actualizan en tiempo real.<br>3. Si cierra la jornada de forma parcial, el sistema **mantiene** `fecha_inicio` para continuar acumulando tiempo.<br>4. Si continúa trabajando, el tiempo activo sigue contando desde el inicio original.<br>5. Al cerrar la jornada final, el sistema consolida el tiempo total transcurrido. |
+| **Postcondición** | El tiempo activo de la jornada se mantiene durante cierres parciales y se consolida en el cierre final. |
+| **Evidencia** | `app/page.tsx:fechaInicioJornada`; `jornadaService.ts:calcularResumenJornada` |
+
+#### CU-OP-02 — Cierre Parcial vs. Cierre Final Consolidado
+
+| Campo | Descripción |
+| --- | --- |
+| **Actor** | Operador |
+| **Precondición** | Existe al menos una ruta completada o en progreso |
+| **Flujo A — Cierre Parcial** | 1. El operador presiona el botón **"Cierre Parcial"**.<br>2. El sistema calcula métricas solo desde `fecha_inicio` actual (último reset).<br>3. Se etiqueta el registro como `tipo_cierre = "parcial"`.<br>4. Se persisten las métricas parciales en `HistorialRutas`.<br>5. Se **mantiene** `fecha_inicio` para continuidad de la jornada; el tiempo sigue corriendo.<br>6. En "Mi Historial" se muestra el badge **"Cierre Parcial / Intermedio"**. |
+| **Flujo B — Cierre Final** | 1. El operador presiona el botón **"Cierre Final"**.<br>2. El sistema busca el `fecha_inicio` más antiguo de los cierres del día.<br>3. Se calculan las métricas totales del día (todas las rutas ejecutadas hoy).<br>4. Se etiqueta el registro como `tipo_cierre = "final"`.<br>5. Se persisten las métricas consolidadas en `HistorialRutas`.<br>6. Se reinicia `fecha_inicio` a `now()`; los contadores vuelven a 0.<br>7. El operador puede seguir completando rutas; solo las rutas posteriores al nuevo `fecha_inicio` contarán para el siguiente cierre.<br>8. En "Mi Historial" se muestra el badge **"Cierre Final Diario"**. |
+| **Postcondición** | El historial refleja el tipo de cierre; los cierres finales muestran el acumulado diario y reinician el contador. |
+| **Evidencia** | `jornadaService.ts:calcularResumenJornada`, `calcularResumenJornadaFinal`; `app/page.tsx:handleCerrarJornada`; `HistorialOperador.tsx` |
+
+#### CU-OP-03 — Finalización de Ruta sin Bloqueos
+
+| Campo | Descripción |
+| --- | --- |
+| **Actor** | Operador |
+| **Precondición** | Ruta asignada al operador con contenedores |
+| **Flujo principal** | 1. El operador selecciona "Continuar Ruta" y el sistema marca la ruta como `en_progreso`.<br>2. El operador presiona "Ruta Completada".<br>3. El frontend invoca la RPC `completar_ruta` (bypass seguro de RLS).<br>4. Supabase actualiza el estado a `completada` y `ultima_ejecucion = now()`.<br>5. El frontend elimina la ruta del listado "En Progreso" y limpia el panel superior.<br>6. Si los contenedores ya estaban vacíos, la operación sigue sin error. |
+| **Postcondición** | La ruta se persiste como completada, desaparece de "En Progreso" y aparece en "Mi Historial". |
+| **Evidencia** | `operadoresService.ts:marcarRutaCompletada`; `supabase/migrations/22_rpc_completar_ruta.sql`; `PanelRutaOperador.tsx`; `app/page.tsx` |
+
+#### CU-OP-04 — Consulta de Historial en Dos Columnas
+
+| Campo | Descripción |
+| --- | --- |
+| **Actor** | Operador |
+| **Precondición** | Al menos una jornada cerrada o ruta completada |
+| **Flujo principal** | 1. El operador cambia a la pestaña "Mi Historial".<br>2. El sistema oculta el mapa principal.<br>3. Se muestran dos columnas: a la izquierda **"Jornadas"** con los cierres parciales y finales; a la derecha **"Rutas Completadas"** con cada ruta y detalles expandibles.<br>4. Cada jornada muestra su badge de tipo (parcial/final), rutas, km, tiempo y combustible.<br>5. Cada ruta muestra su estado, contenedores, distancia y fecha de finalización. |
+| **Postcondición** | El operador tiene una vista de auditoría clara, separando jornadas de rutas individuales. |
+| **Evidencia** | `app/page.tsx` (condicional de mapa); `HistorialOperador.tsx` layout `lg:grid-cols-2` |
 
 ### e.3 Actor: Ciudadano
 
@@ -255,7 +304,7 @@ useCaseDiagram
     Ciud --> (Consultar mapa de contenedores y puntos de acopio)
 ```
 
-> **Nota**: los casos de uso en gris (roles, aprobaciones, cierre de jornada) pertenecen a las HUs pendientes de los Sprints 3/4; los demás están operativos en la aplicación actual.
+> **Nota**: los casos de uso de cierre de jornada y finalización de rutas ya están implementados y operativos. Los casos de uso en gris (alertas predictivas, reportes exportables, detección de anomalías) pertenecen a HUs pendientes del Sprint 4.
 
 ---
 

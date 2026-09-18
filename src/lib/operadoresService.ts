@@ -126,7 +126,7 @@ export async function cancelarRuta(rutaId: string): Promise<void> {
 
   if (error) {
     console.error("Error al cancelar ruta:", JSON.stringify(error, null, 2));
-    if (error?.code && error?.code === 42501) {
+    if (error?.code && error?.code === "42501") {
       console.error("⚠️ Error RLS detectado: Políticas de seguridad denegaron la cancelación de la ruta");
       console.error("   Detalle: El usuario actual ('auth.uid()') no tiene permiso para actualizar rutas");
     }
@@ -193,6 +193,125 @@ export async function obtenerRutasActivasOperador(
   return (data ?? []) as Ruta[];
 }
 
+export async function obtenerRutasJornadaActual(
+  operadorId: string,
+  fechaInicioJornada?: string
+): Promise<Ruta[]> {
+  if (!estaSupabaseConfigurado()) return [];
+
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from("Rutas")
+    .select("*")
+    .eq("operador_asignado", operadorId)
+    .in("estado", [
+      "aceptada",
+      "en_progreso",
+      "completada",
+      "finalizada_incompleta",
+    ])
+    .order("fecha_creacion", { ascending: false });
+
+  if (error) {
+    console.error(
+      "Error al obtener rutas de la jornada actual:",
+      JSON.stringify(error, null, 2)
+    );
+    return [];
+  }
+
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  const manana = new Date(hoy);
+  manana.setDate(manana.getDate() + 1);
+
+  const rutasDeHoy = (data ?? []).filter((ruta) => {
+    // Las rutas activas siempre pertenecen a la jornada actual
+    if (ruta.estado === "aceptada" || ruta.estado === "en_progreso") {
+      return true;
+    }
+
+    // Rutas finalizadas: filtrar por fechaInicioJornada si está disponible
+    if (fechaInicioJornada && ruta.ultima_ejecucion) {
+      return new Date(ruta.ultima_ejecucion) >= new Date(fechaInicioJornada);
+    }
+
+    // Fallback por día actual si no hay fechaInicioJornada
+    const fechaCreacion = new Date(ruta.fecha_creacion);
+    const fechaActualizacion = ruta.ultima_ejecucion
+      ? new Date(ruta.ultima_ejecucion)
+      : null;
+
+    const creadaHoy = fechaCreacion >= hoy && fechaCreacion < manana;
+    const actualizadaHoy =
+      fechaActualizacion != null &&
+      fechaActualizacion >= hoy &&
+      fechaActualizacion < manana;
+
+    return creadaHoy || actualizadaHoy;
+  });
+
+  console.log(
+    "[EcoRoute] obtenerRutasJornadaActual:",
+    rutasDeHoy.length,
+    "rutas - estados:",
+    rutasDeHoy.map((r) => r.estado)
+  );
+
+  return rutasDeHoy as Ruta[];
+}
+
+export async function obtenerRutasCompletadasHoy(
+  operadorId: string
+): Promise<Ruta[]> {
+  if (!estaSupabaseConfigurado()) return [];
+
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from("Rutas")
+    .select("*")
+    .eq("operador_asignado", operadorId)
+    .in("estado", ["completada", "finalizada_incompleta"])
+    .order("ultima_ejecucion", { ascending: false });
+
+  if (error) {
+    console.error(
+      "Error al obtener rutas completadas hoy:",
+      JSON.stringify(error, null, 2)
+    );
+    return [];
+  }
+
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  const manana = new Date(hoy);
+  manana.setDate(manana.getDate() + 1);
+
+  return (data ?? []).filter((ruta) => {
+    const fechaEjecucion = ruta.ultima_ejecucion
+      ? new Date(ruta.ultima_ejecucion)
+      : new Date(ruta.fecha_creacion);
+    return fechaEjecucion >= hoy && fechaEjecucion < manana;
+  }) as Ruta[];
+}
+
+export async function aceptarRuta(rutaId: string): Promise<void> {
+  if (!estaSupabaseConfigurado()) {
+    throw new Error("Supabase no está configurado");
+  }
+
+  const supabase = getSupabaseClient();
+  const { error } = await supabase
+    .from("Rutas")
+    .update({ estado: "aceptada" as EstadoRuta } as UpdateRuta)
+    .eq("id", rutaId);
+
+  if (error) {
+    console.error("Error al aceptar ruta:", JSON.stringify(error, null, 2));
+    throw new Error("No se pudo aceptar la ruta");
+  }
+}
+
 export async function marcarRutaEnProgreso(rutaId: string): Promise<void> {
   if (!estaSupabaseConfigurado()) {
     throw new Error("Supabase no está configurado");
@@ -232,7 +351,8 @@ export async function marcarRutaCompletada(rutaId: string): Promise<boolean> {
   console.log("[EcoRoute] Intentando completar ruta vía RPC:", rutaId);
 
   // Llamar a la función RPC que bypassa RLS de forma segura
-  const { data, error } = await supabase.rpc("completar_ruta", {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("completar_ruta", {
     p_ruta_id: rutaId,
   });
 
@@ -241,8 +361,9 @@ export async function marcarRutaCompletada(rutaId: string): Promise<boolean> {
     return false;
   }
 
-  if (!data || !data.exito) {
-    console.error("[EcoRoute] RPC retornó éxito=false:", data);
+  const resultado = data as { exito?: boolean } | null;
+  if (!resultado || !resultado.exito) {
+    console.error("[EcoRoute] RPC retornó éxito=false:", resultado);
     return false;
   }
 

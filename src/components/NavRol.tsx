@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { obtenerSnapshotSesion, cerrarSesion } from "@/lib/authService";
 import { puede, ETIQUETAS_ROL } from "@/lib/rolesAutorizados";
 import { estaSupabaseConfigurado, getSupabaseClient } from "@/lib/supabaseClient";
+import { aceptarRuta } from "@/lib/operadoresService";
 import type { AccionSistema } from "@/lib/rolesAutorizados";
 import type { RolUsuario, Notificacion } from "@/types/schema";
 
@@ -60,6 +61,7 @@ export default function NavRol() {
 
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const [popoverAbierto, setPopoverAbierto] = useState(false);
+  const [procesandoId, setProcesandoId] = useState<string | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -132,10 +134,12 @@ export default function NavRol() {
   }, []);
 
   const handleAceptarRuta = useCallback(async (notif: Notificacion) => {
+    if (!sesion?.usuario?.id) return;
+
     let enlaceRuta = notif.enlace;
- 
+
     // Fallback: buscar ruta pendiente en Supabase si el enlace no viene en la notificación
-    if (!enlaceRuta && sesion?.usuario?.id) {
+    if (!enlaceRuta) {
       const supabase = getSupabaseClient();
       const { data, error } = await supabase
         .from("Rutas")
@@ -145,7 +149,7 @@ export default function NavRol() {
         .order("fecha_creacion", { ascending: false })
         .limit(1)
         .maybeSingle();
- 
+
       if (error) {
         console.error("Error en fallback de ruta:", error.message);
         return;
@@ -154,12 +158,11 @@ export default function NavRol() {
         enlaceRuta = data.id;
       }
     }
- 
+
     if (!enlaceRuta || procesandoId) return;
     setProcesandoId(notif.id);
     try {
       await aceptarRuta(enlaceRuta);
-      await registrarHistorialAccionRuta(sesion.usuario.id, enlaceRuta, "aceptada");
       await marcarLeida(notif.id);
       window.dispatchEvent(
         new CustomEvent("ecoroute:ruta-aceptada", {
@@ -172,7 +175,7 @@ export default function NavRol() {
     } finally {
       setProcesandoId(null);
     }
-  }, []);
+  }, [sesion, procesandoId, marcarLeida]);
 
   if (!sesion) return null;
 
@@ -330,6 +333,15 @@ export default function NavRol() {
                                 >
                                   <path d="M20 6 9 17l-5-5" />
                                 </svg>
+                              </button>
+                            )}
+                            {!notif.leida && esAsignacion && (
+                              <button
+                                onClick={() => handleAceptarRuta(notif)}
+                                disabled={procesandoId === notif.id}
+                                className="shrink-0 rounded-md bg-emerald-100 px-2 py-1 text-[10px] font-medium text-emerald-700 transition-colors hover:bg-emerald-200 disabled:opacity-50 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/50"
+                              >
+                                {procesandoId === notif.id ? "…" : "Aceptar"}
                               </button>
                             )}
                           </div>
