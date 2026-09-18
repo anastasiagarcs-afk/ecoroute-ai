@@ -1,5 +1,5 @@
 # Bitácora del Proyecto — EcoRoute AI
-> Documento generado automáticamente el 17 de septiembre de 2026 a las 11:38 p. m. por `npm run informe`. No editar a mano: se regenera desde el código para mantenerse al día.
+> Documento generado automáticamente el 18 de septiembre de 2026 a las 01:48 a. m. por `npm run informe`. No editar a mano: se regenera desde el código para mantenerse al día.
 > **Nota**: Este archivo es el registro cronológico automático. Para el informe académico formal, ver `INFORME_PROYECTO.md`.
 
 ## 1. Arquitectura y Stack Tecnológico
@@ -57,8 +57,8 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 
 | Módulo | Líneas | Descripción |
 | --- | --- | --- |
-| `src/lib/adminService.ts` | 141 | — |
-| `src/lib/authService.ts` | 256 | — |
+| `src/lib/adminService.ts` | 134 | — |
+| `src/lib/authService.ts` | 251 | — |
 | `src/lib/contenedoresStore.ts` | 769 | Almacén de contenedores: carga y semilla desde Supabase, normalización de ubicación (objeto, GeoJSON, EWKT o WKB/EWKB hexadecimal con parseFloat), datos de respaldo en localStorage y registro, vaciado (0% y estado vacio), edición y eliminación en tiempo real. |
 | `src/lib/gamificacion.ts` | 190 | Lógica pura de gamificación: puntos por kg según material, niveles de ciudadano, progreso y catálogo de recompensas. |
 | `src/lib/geminiPredictiveService.ts` | 356 | Servicio predictivo con IA (HU-11/RF-24): obtiene el histórico de LecturasSensores desde Supabase (o sintetiza lecturas cuando no hay datos), ajusta un modelo de regresión lineal, consume opcionalmente la API de Gemini (NEXT_PUBLIC_GEMINI_API_KEY) y genera alertas predictivas que se persisten en la tabla Notificaciones (tipo 'alerta_predictiva'). |
@@ -66,7 +66,7 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 | `src/lib/jornadaService.ts` | 371 | — |
 | `src/lib/n8nWebhook.ts` | 63 | Cliente para webhook n8n: obtiene URL desde env, POST JSON con timeout 6s (AbortController), payload {usuario_id, contenedor_id, material, peso_kg, timestamp}, fallback a null si falla. |
 | `src/lib/operadoresService.ts` | 393 | — |
-| `src/lib/reciclajeService.ts` | 264 | Servicio Supabase del módulo de reciclaje: usuario ciudadano actual, registro de entregas con webhook n8n (insert PuntosReciclaje + update Usuarios) y entregas recientes. |
+| `src/lib/reciclajeService.ts` | 279 | Servicio Supabase del módulo de reciclaje: usuario ciudadano actual, registro de entregas con webhook n8n (insert PuntosReciclaje + update Usuarios) y entregas recientes. |
 | `src/lib/reporteExportador.ts` | 237 | — |
 | `src/lib/rolesAutorizados.ts` | 74 | — |
 | `src/lib/routeOptimizer.ts` | 252 | Optimización de rutas con OSRM (perfiles vehiculares y pesos) y cálculo de ruta por distancia, con fallback a línea recta. |
@@ -104,8 +104,9 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 - `supabase/migrations/24_fix_usuarios_rls.sql`
 - `supabase/migrations/25_usuarios_delete_admin.sql`
 - `supabase/migrations/26_fix_usuarios_insert_policy.sql`
+- `supabase/migrations/28_security_rls_usuarios_final.sql`
 
-Total de políticas RLS habilitadas en migraciones: 53.
+Total de políticas RLS habilitadas en migraciones: 57.
 
 ### Tablas
 

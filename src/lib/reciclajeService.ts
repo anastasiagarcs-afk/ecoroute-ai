@@ -53,12 +53,27 @@ async function cargarOCrearUsuario(): Promise<Usuario> {
   if (!estaSupabaseConfigurado()) throw errorSinSupabase();
   const supabase = getSupabaseClient();
 
+  // Si hay una sesión autenticada, usar el perfil del usuario actual.
+  const { data: sesionData } = await supabase.auth.getSession();
+  const usuarioAutenticadoId = sesionData.session?.user?.id;
+
+  if (usuarioAutenticadoId) {
+    const consultaAutenticado = await supabase
+      .from("Usuarios")
+      .select("*")
+      .eq("id", usuarioAutenticadoId)
+      .maybeSingle();
+
+    if (!consultaAutenticado.error && consultaAutenticado.data) {
+      return consultaAutenticado.data;
+    }
+  }
+
+  // Sin sesión: buscar o crear el ciudadano demo para el flujo anónimo.
   const consulta = await supabase
     .from("Usuarios")
     .select("*")
-    .eq("rol", "Ciudadano")
-    .order("created_at", { ascending: true })
-    .limit(1)
+    .eq("email", EMAIL_USUARIO_DEMO)
     .maybeSingle();
 
   if (!consulta.error && consulta.data) return consulta.data;

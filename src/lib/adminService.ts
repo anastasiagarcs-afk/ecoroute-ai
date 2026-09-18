@@ -1,19 +1,12 @@
-import { createBrowserClient } from "@supabase/ssr";
-import type { Database, RolUsuario, SolicitudAcceso, Usuario } from "@/types/schema";
+import { getSupabaseClient } from "@/lib/supabaseClient";
+import type { RolUsuario, SolicitudAcceso, Usuario } from "@/types/schema";
 
 type SolicitudConUsuario = SolicitudAcceso & { Usuarios: Usuario };
-
-function crearCliente() {
-  return createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
 
 export async function listarSolicitudesPendientes(): Promise<
   { exito: boolean; datos?: SolicitudConUsuario[]; error?: string }
 > {
-  const supabase = crearCliente();
+  const supabase = getSupabaseClient();
 
   // 1. Obtener solicitudes pendientes (sin JOIN para evitar problemas de RLS)
   const { data: solicitudes, error } = await supabase
@@ -47,7 +40,7 @@ export async function aprobarSolicitud(
   aprobar: boolean,
   rolAsignado?: RolUsuario
 ): Promise<{ exito: boolean; error?: string }> {
-  const supabase = crearCliente();
+  const supabase = getSupabaseClient();
   const { error } = await supabase.rpc("aprobar_solicitud_acceso", {
     p_solicitud_id: solicitudId,
     p_aprobar: aprobar,
@@ -61,7 +54,7 @@ export async function rechazarSolicitud(
   solicitudId: string,
   motivo?: string
 ): Promise<{ exito: boolean; error?: string }> {
-  const supabase = crearCliente();
+  const supabase = getSupabaseClient();
   const { error } = await supabase.rpc("aprobar_solicitud_acceso", {
     p_solicitud_id: solicitudId,
     p_aprobar: false,
@@ -74,7 +67,7 @@ export async function rechazarSolicitud(
 export async function listarUsuarios(): Promise<
   { exito: boolean; datos?: Usuario[]; error?: string }
 > {
-  const supabase = crearCliente();
+  const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from("Usuarios")
     .select("*")
@@ -88,7 +81,7 @@ export async function actualizarRolUsuario(
   usuarioId: string,
   nuevoRol: RolUsuario
 ): Promise<{ exito: boolean; error?: string }> {
-  const supabase = crearCliente();
+  const supabase = getSupabaseClient();
   const { error } = await supabase
     .from("Usuarios")
     .update({ rol: nuevoRol })
@@ -102,7 +95,7 @@ export async function actualizarZonaUsuario(
   usuarioId: string,
   nuevaZona: string | null
 ): Promise<{ exito: boolean; error?: string }> {
-  const supabase = crearCliente();
+  const supabase = getSupabaseClient();
   const { error } = await supabase
     .from("Usuarios")
     .update({ zona_asignada: nuevaZona })
@@ -116,7 +109,7 @@ export async function toggleActivoUsuario(
   usuarioId: string,
   activo: boolean
 ): Promise<{ exito: boolean; error?: string }> {
-  const supabase = crearCliente();
+  const supabase = getSupabaseClient();
   const { error } = await supabase
     .from("Usuarios")
     .update({ activo })
@@ -129,7 +122,7 @@ export async function toggleActivoUsuario(
 export async function eliminarUsuario(
   usuarioId: string
 ): Promise<{ exito: boolean; error?: string }> {
-  const supabase = crearCliente();
+  const supabase = getSupabaseClient();
   const { error } = await supabase
     .from("Usuarios")
     .delete()

@@ -82,9 +82,6 @@ export async function registrarCuenta(
     password,
     options: {
       data: { nombre: datos.nombre },
-      // email_confirm: true bypassa la confirmación por email en dev/QA
-      // @ts-expect-error Propiedad no tipada pero soportada por la API de Supabase
-      email_confirm: true,
     },
   });
   if (authError) return { exito: false, error: authError.message };
@@ -101,6 +98,7 @@ export async function registrarCuenta(
 
   if (!existente) {
     const { error: insertError } = await supabase.from("Usuarios").insert({
+      id: session.user.id,
       nombre: datos.nombre,
       email,
       rol: "Ciudadano",
@@ -128,9 +126,6 @@ export async function registrarCuentaConSolicitud(
     password,
     options: {
       data: { nombre: datos.nombre },
-      // email_confirm: true bypassa la confirmación por email en dev/QA
-      // @ts-expect-error Propiedad no tipada pero soportada por la API de Supabase
-      email_confirm: true,
     },
   });
   if (authError) return { exito: false, error: authError.message };
