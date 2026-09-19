@@ -589,13 +589,44 @@ Se usa **n8n** como plataforma de automatización para desacoplar la lógica de 
 3. Si n8n responde con `exito`, se usa su `puntosGanados`/`totalPuntos` (autoridad externa).
 4. Si no responde, se invoca `registrarEntrega()` que inserta en `PuntosReciclaje` y actualiza `Usuarios.puntos_reciclaje` de forma transaccional (`reciclajeService.ts:117-187`).
 
-### j.3 Flujos programados de alertas
+### j.3 Integracion bidireccional de alertas (Fase 3 - Completada)
 
-Diseño previsto (Sprint 4):
+El sistema ahora soporta **recepcion de alertas externas** desde n8n hacia Next.js mediante una API Route autenticada:
 
-- **Flujo diario**: consulta `Contenedores` con `nivel_llenado > 80` e inyecta en `Notificaciones` (tipo `alerta_llenado`).
-- **Flujo predictivo**: envía a Gemini API la serie de `LecturasSensores` y registra `alerta_predictiva` si `probabilidad > 85%` en `< 4 h` (HU-11).
-- **Circuit-breaker**: el frontend nunca depende de n8n para operar; la automatización es un componente **mejorable y opcional** en la demo.
+**Arquitectura del flujo entrante:**
+
+```
+n8n (externo) --POST--> /api/webhooks/n8n (Next.js) --INSERT--> Supabase Notificaciones --Realtime--> PanelAlertas (Admin UI)
+```
+
+**Detalles de implementacion:**
+
+- **API Route**: `app/api/webhooks/n8n/route.ts` - Endpoint POST que recibe payloads JSON desde n8n.
+- **Autenticacion**: Header `X-Webhook-Secret` validado contra la variable de entorno `N8N_WEBHOOK_SECRET`.
+- **Persistencia**: Usa `SUPABASE_SERVICE_ROLE_KEY` para bypass RLS e insertar en la tabla `Notificaciones`.
+- **Destinatarios**: Configurables via body (`roles: ["Admin", "Gerente"]`); por defecto Admin y Gerente.
+- **Tipo de notificacion**: `alerta_n8n` (enum `tipo_notificacion`, migracion 36).
+- **Tiempo real**: La insercion dispara eventos Realtime que actualizan `PanelAlertas.tsx` y la campanita `NavRol.tsx`.
+
+**Payload esperado desde n8n:**
+
+```json
+{
+  "tipo": "alerta_n8n",
+  "mensaje": "Contenedor CNT-001 al 95% de capacidad",
+  "contenedor_id": "uuid-del-contenedor",
+  "roles": ["Admin", "Gerente"],
+  "enlace": "/#dashboard"
+}
+```
+
+**Respuesta exitosa:** `{ "ok": true, "count": 2 }`
+
+**Flujos de alertas existentes (pre-Fase 3):**
+
+- **Trigger SQL** (migracion 29): genera `alerta_llenado` automaticamente cuando `nivel_llenado >= 80%` via PostgreSQL trigger.
+- **Prediccion IA** (`geminiPredictiveService.ts`): genera `alerta_predictiva` cuando Gemini AI detecta probabilidad >85% en <4 horas.
+- **Circuit-breaker**: el frontend nunca depende de n8n para operar; la automatizacion es un componente mejorable y opcional en la demo.
 
 ---
 
@@ -611,11 +642,11 @@ https://github.com/anastasiagarcs-afk/ecoroute-ai
 
 | Elemento | Descripción |
 | --- | --- |
-| Stack | Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · Leaflet 1.9 · Supabase (PostgreSQL + RLS + PostGIS) · OSRM · n8n |
-| Frontend | `app/` (páginas) y `src/components/` (12 componentes modulares) |
-| Lógica | `src/lib/` (8 módulos: contenedores, rutas, reciclaje, gamificación, toasts, webhook n8n, cliente Supabase) |
+| Stack | Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · Leaflet 1.9 · Supabase (PostgreSQL + RLS + PostGIS) · OSRM · n8n · Gemini AI |
+| Frontend | `app/` (paginas + API Route) y `src/components/` (19 componentes modulares) |
+| Logica | `src/lib/` (17 modulos: contenedores, rutas, reciclaje, gamificacion, alertas, auth, admin, n8n, IA predictiva, reportes, toasts, cliente Supabase) |
 | Tipos | `src/types/schema.ts` (modelo tipado completo + tipos de Supabase) |
-| Base de datos | `supabase/migrations/` (7 migraciones idempotentes) |
+| Base de datos | `supabase/migrations/` (36 migraciones idempotentes, 8 tablas, 61 politicas RLS) |
 | Documentación | `PLAN_PROYECTO.md`, `INFORME_PROYECTO.md`, `BITACORA.md` (automática), `AGENTS.md` |
 
 ### k.2 Instalación y ejecución local
@@ -632,7 +663,10 @@ npm install
 #    Copia o crea el archivo .env.local con:
 #    NEXT_PUBLIC_SUPABASE_URL=...
 #    NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-#    NEXT_PUBLIC_N8N_WEBHOOK_URL=...   (opcional)
+#    NEXT_PUBLIC_GEMINI_API_KEY=...   (opcional - IA predictiva)
+#    NEXT_PUBLIC_N8N_WEBHOOK_URL=...  (opcional - n8n)
+#    N8N_WEBHOOK_SECRET=...           (opcional - auth webhooks entrantes)
+#    SUPABASE_SERVICE_ROLE_KEY=...    (necesario - API Route n8n)
 
 # 4. Aplicar migraciones de base de datos
 #    En Supabase SQL Editor, ejecutar en orden las migraciones de supabase/migrations/
