@@ -1,5 +1,5 @@
 # Bitácora del Proyecto — EcoRoute AI
-> Documento generado automáticamente el 19 de septiembre de 2026 a las 03:48 p. m. por `npm run informe`. No editar a mano: se regenera desde el código para mantenerse al día.
+> Documento generado automáticamente el 19 de septiembre de 2026 a las 04:22 p. m. por `npm run informe`. No editar a mano: se regenera desde el código para mantenerse al día.
 > **Nota**: Este archivo es el registro cronológico automático. Para el informe académico formal, ver `INFORME_PROYECTO.md`.
 
 ## 1. Arquitectura y Stack Tecnológico
@@ -41,7 +41,7 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 | `src/components/PanelRutaOperador.tsx` | PanelRutaOperador | 208 | — |
 | `src/components/PopupContenedor.tsx` | PopupContenedor | 238 | Contenido en React del popup de cada marcador: información y estado del contenedor e icono con acciones Vaciar (0% y estado Vacío/Disponible), Editar y Eliminar. |
 | `src/components/RegistroReciclajeForm.tsx` | RegistroReciclajeForm | 244 | Formulario ciudadano para registrar entregas (material + peso en kg) con cálculo automático de puntos e inserción en Supabase. |
-| `src/components/RoutePanel.tsx` | RoutePanel | 911 | Panel de optimización de rutas: selector de contenedores, generación de ruta vía OSRM, persistencia en el historial, gestión de contenedores (vaciar, editar, eliminar) y reinicio a línea recta. |
+| `src/components/RoutePanel.tsx` | RoutePanel | 963 | Panel de optimización de rutas: selector de contenedores, generación de ruta vía OSRM, persistencia en el historial, gestión de contenedores (vaciar, editar, eliminar) y reinicio a línea recta. |
 | `src/components/RoutesMapView.tsx` | RoutesMapView | 135 | Vista integrada de mapa + panel de rutas. Coordina la ruta generada y la ruta histórica inspeccionada sobre Leaflet. |
 | `src/components/RutaPersonalizadaModal.tsx` | RutaPersonalizadaModal | 232 | — |
 | `src/components/SeparacionGuia.tsx` | SeparacionGuia | 216 | Guía interactiva de separación en la fuente: tarjetas por tipo de residuo con qué depositar y qué evitar. |

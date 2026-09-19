@@ -31,6 +31,7 @@ import { vaciarContenedor } from "@/lib/contenedoresStore";
 import { puede } from "@/lib/rolesAutorizados";
 import { obtenerSnapshotSesion } from "@/lib/authService";
 import { mostrarToast } from "@/lib/toastStore";
+import { ZONAS_PREDEFINIDAS } from "@/lib/zonas";
 import type { RegistroHistorialRuta } from "@/lib/historialRutas";
 import type {
   Contenedor,
@@ -135,6 +136,27 @@ export default function RoutePanel({
   useEffect(() => {
     listarOperadores().then(setOperadores);
   }, []);
+
+  const operadoresPorZona = useMemo(() => {
+    const sinZona: Usuario[] = [];
+    const porZona = new Map<string, Usuario[]>();
+
+    for (const op of operadores) {
+      if (!op.zona_asignada || op.zona_asignada === "Sin zona") {
+        sinZona.push(op);
+      } else {
+        const lista = porZona.get(op.zona_asignada) ?? [];
+        lista.push(op);
+        porZona.set(op.zona_asignada, lista);
+      }
+    }
+
+    const todasLasZonas = [...ZONAS_PREDEFINIDAS]
+      .sort((a, b) => a.localeCompare(b))
+      .map((zona) => ({ zona, operadores: porZona.get(zona) ?? [] }));
+
+    return { sinZona, todasLasZonas };
+  }, [operadores]);
 
   const cargarRutasGuardadas = async () => {
     setCargandoRutasGuardadas(true);
@@ -649,11 +671,26 @@ export default function RoutePanel({
                     onChange={(e) => setOperadorSeleccionado(e.target.value)}
                     className="mt-1 w-full rounded-lg border border-blue-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-blue-700 dark:bg-zinc-800 dark:text-zinc-100"
                   >
-                    <option value="">Sin asignar</option>
-                    {operadores.map((operador) => (
-                      <option key={operador.id} value={operador.id}>
-                        {operador.nombre} ({operador.email})
-                      </option>
+                    <option value="">Sin asignar (solo guardar)</option>
+                    <optgroup label="Sin zona asignada">
+                      {operadoresPorZona.sinZona.length > 0
+                        ? operadoresPorZona.sinZona.map((operador) => (
+                            <option key={operador.id} value={operador.id}>
+                              {operador.nombre} ({operador.email})
+                            </option>
+                          ))
+                        : <option disabled>(Sin operadores)</option>}
+                    </optgroup>
+                    {operadoresPorZona.todasLasZonas.map(({ zona, operadores: ops }) => (
+                      <optgroup key={zona} label={`Zona: ${zona}`}>
+                        {ops.length > 0
+                          ? ops.map((operador) => (
+                              <option key={operador.id} value={operador.id}>
+                                {operador.nombre} ({operador.email})
+                              </option>
+                            ))
+                          : <option disabled>(Sin operadores disponibles en esta zona)</option>}
+                      </optgroup>
                     ))}
                   </select>
                   <button
@@ -730,10 +767,25 @@ export default function RoutePanel({
                   className="mt-1 w-full rounded-lg border border-blue-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-blue-700 dark:bg-zinc-800 dark:text-zinc-100"
                 >
                   <option value="">Sin asignar (solo guardar)</option>
-                  {operadores.map((operador) => (
-                    <option key={operador.id} value={operador.id}>
-                      {operador.nombre} ({operador.email})
-                    </option>
+                  <optgroup label="Sin zona asignada">
+                    {operadoresPorZona.sinZona.length > 0
+                      ? operadoresPorZona.sinZona.map((operador) => (
+                          <option key={operador.id} value={operador.id}>
+                            {operador.nombre} ({operador.email})
+                          </option>
+                        ))
+                      : <option disabled>(Sin operadores)</option>}
+                  </optgroup>
+                  {operadoresPorZona.todasLasZonas.map(({ zona, operadores: ops }) => (
+                    <optgroup key={zona} label={`Zona: ${zona}`}>
+                      {ops.length > 0
+                        ? ops.map((operador) => (
+                            <option key={operador.id} value={operador.id}>
+                              {operador.nombre} ({operador.email})
+                            </option>
+                          ))
+                        : <option disabled>(Sin operadores disponibles en esta zona)</option>}
+                    </optgroup>
                   ))}
                 </select>
               )}
