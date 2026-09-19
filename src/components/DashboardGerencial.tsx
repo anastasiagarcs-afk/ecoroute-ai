@@ -12,7 +12,6 @@ import { obtenerSnapshotSesion } from "@/lib/authService";
 import { puede, ETIQUETAS_ROL } from "@/lib/rolesAutorizados";
 import {
   analizarContenedores,
-  guardarAlertaPredictiva,
   prediccionEstaEnRiesgo,
   type PrediccionContenedor,
 } from "@/lib/geminiPredictiveService";
@@ -96,6 +95,7 @@ export default function DashboardGerencial() {
 
   const [predicciones, setPredicciones] = useState<PrediccionContenedor[]>([]);
   const [analizandoPrediccion, setAnalizandoPrediccion] = useState(false);
+  const [panelPrediccionesVisible, setPanelPrediccionesVisible] = useState(true);
 
   const formatearHoras = (horas: number): string => {
     const horasCercanas = Math.max(0, horas);
@@ -109,6 +109,7 @@ export default function DashboardGerencial() {
   };
 
   const ejecutarPrediccionIA = async () => {
+    setPanelPrediccionesVisible(true);
     setAnalizandoPrediccion(true);
     try {
       const resultado = await analizarContenedores(contenedoresFiltrados);
@@ -121,22 +122,6 @@ export default function DashboardGerencial() {
     } finally {
       setAnalizandoPrediccion(false);
     }
-  };
-
-  const guardarAlertaPredictiva = async (prediccion: PrediccionContenedor) => {
-    try {
-      await guardarAlertaPredictiva(prediccion);
-      mostrarToast(
-        `Alerta del contenedor ${prediccion.codigo} registrada`,
-        "exito",
-      );
-    } catch {
-      mostrarToast("Error al notificar el riesgo", "error");
-    }
-  };
-
-  const notificarRiesgo = (prediccion: PrediccionContenedor) => {
-    void guardarAlertaPredictiva(prediccion);
   };
 
   const limpiarFiltros = () => {
@@ -346,6 +331,7 @@ export default function DashboardGerencial() {
         />
       </div>
 
+      {panelPrediccionesVisible && (
       <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         <div className="mb-3 flex items-center justify-between gap-2">
           <div>
@@ -356,14 +342,24 @@ export default function DashboardGerencial() {
               Estimación con Gemini de riesgo de desborde en las próximas horas
             </p>
           </div>
-          <button
-            type="button"
-            onClick={ejecutarPrediccionIA}
-            disabled={analizandoPrediccion}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-emerald-600"
-          >
-            {analizandoPrediccion ? "Analizando…" : "Analizar con IA"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={ejecutarPrediccionIA}
+              disabled={analizandoPrediccion}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-emerald-600"
+            >
+              {analizandoPrediccion ? "Analizando…" : "Analizar con IA"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setPanelPrediccionesVisible(false)}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+              title="Ocultar panel"
+            >
+              ✕
+            </button>
+          </div>
         </div>
         {predicciones.length === 0 ? (
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
@@ -373,7 +369,7 @@ export default function DashboardGerencial() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {predicciones.map((prediccion) => {
               const enRiesgo = prediccionEstaEnRiesgo(prediccion);
-  return (
+              return (
                 <div
                   key={prediccion.contenedorId}
                   className={`flex flex-col gap-2 rounded-lg border p-3 ${
@@ -402,9 +398,9 @@ export default function DashboardGerencial() {
                     </span>
                   </div>
                   <div className="flex items-baseline gap-1 text-xl font-bold text-zinc-900 dark:text-zinc-50">
-                    {prediccion.nivelProyectadoEn4h}%
+                    {prediccion.nivelProyectadoEn4h.toFixed(1)}%
                     <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400">
-                      proyectado en 4h · actual {prediccion.nivelActual}%
+                      proyectado en 4h · actual {prediccion.nivelActual.toFixed(1)}%
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-300">
@@ -426,15 +422,6 @@ export default function DashboardGerencial() {
                           ? "Sintetizada"
                           : "Heurística"}
                     </span>
-                    {enRiesgo && (
-                      <button
-                        type="button"
-                        onClick={() => void notificarRiesgo(prediccion)}
-                        className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
-                      >
-                        Notificar a conductor
-                      </button>
-                    )}
                   </div>
                 </div>
               );
@@ -442,6 +429,7 @@ export default function DashboardGerencial() {
           </div>
         )}
       </div>
+      )}
 
       <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         <div className="mb-3 flex items-center justify-between gap-2">
