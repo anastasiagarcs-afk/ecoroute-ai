@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useSyncExternalStore } from "react";
@@ -14,7 +14,7 @@ import { useContenedores } from "@/hooks/useContenedores";
 import { estaSupabaseConfigurado } from "@/lib/supabaseClient";
 import { obtenerSnapshotSesion } from "@/lib/authService";
 import { puede } from "@/lib/rolesAutorizados";
-import { obtenerRutasActivasOperador, obtenerRutasJornadaActual, marcarRutaEnProgreso } from "@/lib/operadoresService";
+import { obtenerRutasActivasOperador, obtenerRutasJornadaActual, marcarRutaEnProgreso, marcarRutaCompletada } from "@/lib/operadoresService";
 import {
   cerrarJornada,
   calcularResumenJornada,
@@ -22,7 +22,8 @@ import {
   type ResumenJornada,
 } from "@/lib/jornadaService";
 import { mostrarToast } from "@/lib/toastStore";
-import type { Ruta, UbicacionPunto } from "@/types/schema";
+import { vaciarContenedor } from "@/lib/contenedoresStore";
+import type { Contenedor, Ruta, UbicacionPunto } from "@/types/schema";
 
 const Map = dynamic(() => import("@/components/Map"), { ssr: false });
 
@@ -40,6 +41,8 @@ export default function Home() {
     if (typeof window === "undefined") return new Date().toISOString();
     return localStorage.getItem("ecoroute:jornada:inicio") ?? new Date().toISOString();
   });
+  const [indiceParadaActual, setIndiceParadaActual] = useState(0);
+  const [guardandoAvance, setGuardandoAvance] = useState(false);
 
   const { contenedores, estado: estadoContenedores } = useContenedores();
 
@@ -53,16 +56,35 @@ export default function Home() {
     ? rutasActivasOperador.find((r) => r.id === rutaSeleccionadaId) ?? null
     : null;
 
+  const contenedoresRutaOrdenados = useMemo(() => {
+    if (!rutaSeleccionada) return [];
+    return rutaSeleccionada.contenedores_asignados
+      .map((id) => contenedores.find((c) => c.id === id))
+      .filter((c): c is Contenedor => c !== undefined);
+  }, [rutaSeleccionada, contenedores]);
+
+  const paradasContenedores = useMemo(
+    () =>
+      contenedoresRutaOrdenados
+        .map((c) => c.ubicacion)
+        .filter((u): u is UbicacionPunto => u !== null),
+    [contenedoresRutaOrdenados]
+  );
+
+  const enfocarEn = paradasContenedores[indiceParadaActual] ?? null;
+
   const handleSeleccionarRuta = useCallback(
     async (ruta: Ruta) => {
       await marcarRutaEnProgreso(ruta.id);
       setRutaSeleccionadaId(ruta.id);
+      setIndiceParadaActual(0);
     },
     []
   );
 
   const handleCerrarPanel = useCallback(() => {
     setRutaSeleccionadaId(null);
+    setIndiceParadaActual(0);
   }, []);
 
   const cargarRutasOperador = useCallback(async () => {
@@ -71,6 +93,36 @@ export default function Home() {
     console.log("[EcoRoute] Rutas activas cargadas:", activas.length);
     setRutasActivasOperador(activas);
   }, [sesion]);
+
+  const manejarSiguienteParada = useCallback(async () => {
+    const contenedorActual = contenedoresRutaOrdenados[indiceParadaActual];
+    if (!contenedorActual || guardandoAvance) return;
+    setGuardandoAvance(true);
+    try {
+      if (contenedorActual.nivel_llenado > 0) {
+        try {
+          await vaciarContenedor(contenedorActual.id);
+        } catch {
+          console.warn("[EcoRoute] Error al vaciar contenedor (no bloqueante):", contenedorActual.id);
+        }
+      }
+      if (indiceParadaActual >= contenedoresRutaOrdenados.length - 1) {
+        if (rutaSeleccionada) {
+          const exito = await marcarRutaCompletada(rutaSeleccionada.id);
+          if (exito) {
+            setRutasActivasOperador((prev) => prev.filter((r) => r.id !== rutaSeleccionada.id));
+            setRutaSeleccionadaId(null);
+            setIndiceParadaActual(0);
+            void cargarRutasOperador();
+          }
+        }
+        return;
+      }
+      setIndiceParadaActual((i) => i + 1);
+    } finally {
+      setGuardandoAvance(false);
+    }
+  }, [indiceParadaActual, contenedoresRutaOrdenados, guardandoAvance, rutaSeleccionada, cargarRutasOperador]);
 
   useEffect(() => {
     if (sesion?.rol !== "Operador" || !sesion.usuario?.id) return;
@@ -435,12 +487,66 @@ export default function Home() {
                 contenedores={rutaSeleccionada
                   ? contenedoresVisibles.filter((c) => rutaSeleccionada.contenedores_asignados.includes(c.id))
                   : contenedoresVisibles}
-                centro={CENTRO_CIUDAD}
-                zoom={13}
+                centro={enfocarEn ?? CENTRO_CIUDAD}
+                zoom={enfocarEn ? 16 : 13}
                 rutaPuntos={rutaSeleccionada ? (rutaSeleccionada.geometria ?? []) : []}
-                paradasRuta={rutaSeleccionada ? (rutaSeleccionada.geometria ?? []) : []}
+                paradasRuta={paradasContenedores}
+                indiceParadaActual={indiceParadaActual}
+                enfocarEn={enfocarEn}
                 rol={sesion.rol}
               />
+
+              {rutaSeleccionada && contenedoresRutaOrdenados.length > 0 && (
+                <div className="absolute bottom-4 left-4 z-[9999] w-72 rounded-xl border border-slate-700 bg-zinc-900 p-4 shadow-2xl">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-emerald-400">
+                      Parada {indiceParadaActual + 1} de {contenedoresRutaOrdenados.length}
+                    </span>
+                    <div className="h-2 w-20 overflow-hidden rounded-full bg-zinc-700">
+                      <div
+                        className="h-full rounded-full bg-emerald-500 transition-all"
+                        style={{ width: `${((indiceParadaActual + 1) / contenedoresRutaOrdenados.length) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {contenedoresRutaOrdenados[indiceParadaActual] && (() => {
+                    const actual = contenedoresRutaOrdenados[indiceParadaActual];
+                    const nivel = Math.round(actual.nivel_llenado);
+                    return (
+                      <>
+                        <div className="mt-3">
+                          <p className="text-sm font-bold text-white">
+                            {actual.numero_identificacion}
+                          </p>
+                          <p className="text-xs text-zinc-400">
+                            {actual.zona ?? "Sin zona"} · {actual.tipo_residuo}
+                          </p>
+                          <div className="mt-1 flex items-center gap-2">
+                            <span
+                              className={`h-2 w-2 rounded-full ${
+                                nivel > 80 ? "bg-red-500" : nivel >= 50 ? "bg-amber-500" : "bg-emerald-500"
+                              }`}
+                            />
+                            <span className="text-xs font-semibold text-white">{nivel}%</span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={manejarSiguienteParada}
+                          disabled={guardandoAvance}
+                          className="mt-3 w-full rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+                        >
+                          {guardandoAvance
+                            ? "Procesando…"
+                            : indiceParadaActual >= contenedoresRutaOrdenados.length - 1
+                              ? "Finalizar Ruta"
+                              : "Marcar como recolectado"}
+                        </button>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
           )}
 

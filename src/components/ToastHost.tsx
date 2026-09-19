@@ -13,6 +13,7 @@ const SNAPSHOT_SERVIDOR_VACIO: NotificacionToast[] = [];
 
 interface EstiloToast {
   icono: string;
+  iconoExtra?: string;
   claseTarjeta: string;
   claseIcono: string;
   ariaViva: "polite" | "assertive";
@@ -40,6 +41,14 @@ const ESTILOS_POR_TIPO: Record<TipoNotificacionToast, EstiloToast> = {
     claseIcono: "bg-sky-600",
     ariaViva: "polite",
   },
+  advertencia: {
+    icono: "M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z",
+    iconoExtra: "M12 9v4M12 17h.01",
+    claseTarjeta:
+      "border-amber-500/50 bg-slate-900 text-amber-200 dark:border-amber-400/40 dark:bg-amber-950 dark:text-amber-100",
+    claseIcono: "bg-amber-500",
+    ariaViva: "assertive",
+  },
 };
 
 export default function ToastHost() {
@@ -50,7 +59,7 @@ export default function ToastHost() {
   );
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-6 z-[1100] flex flex-col items-center gap-2 px-4 sm:items-end sm:px-6">
+    <div className="pointer-events-none fixed right-5 top-5 z-[9999] flex flex-col items-end gap-2">
       {notificaciones.map((notificacion) => {
         const estilo =
           ESTILOS_POR_TIPO[notificacion.tipo] ?? ESTILOS_POR_TIPO.info;
@@ -75,12 +84,13 @@ export default function ToastHost() {
                 className="h-3.5 w-3.5"
               >
                 <path d={estilo.icono} />
+                {estilo.iconoExtra && <path d={estilo.iconoExtra} />}
               </svg>
             </span>
             <div className="flex min-w-0 flex-1 flex-col">
               <p className="text-sm font-semibold">{notificacion.titulo}</p>
               {notificacion.detalle && (
-                <p className="mt-0.5 text-xs opacity-90">
+                <p className="mt-0.5 text-xs opacity-100">
                   {notificacion.detalle}
                 </p>
               )}

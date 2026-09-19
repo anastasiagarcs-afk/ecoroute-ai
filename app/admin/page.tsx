@@ -16,19 +16,12 @@ import {
 import { mostrarToast } from "@/lib/toastStore";
 import { obtenerSnapshotSesion, cerrarSesion } from "@/lib/authService";
 import { puede, ETIQUETAS_ROL } from "@/lib/rolesAutorizados";
+import { ZONAS_PREDEFINIDAS } from "@/lib/zonas";
 import PanelAlertas from "@/components/PanelAlertas";
 import type { RolUsuario, SolicitudAcceso, Usuario } from "@/types/schema";
 
 type SolicitudConUsuario = SolicitudAcceso & { Usuarios: Usuario };
 type TabActiva = "solicitudes" | "usuarios" | "alertas";
-
-const ZONAS_PREDEFINIDAS = [
-  "Alta Vista",
-  "Puerto Ordaz",
-  "San Félix",
-  "Unare",
-  "Zona Centro",
-] as const;
 
 const COLORES_ROL: Record<RolUsuario, string> = {
   Admin: "bg-violet-50 text-violet-700 ring-violet-600/20 dark:bg-violet-500/10 dark:text-violet-400",

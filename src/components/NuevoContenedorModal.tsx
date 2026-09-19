@@ -9,6 +9,7 @@ import {
 } from "@/lib/gamificacion";
 import { registrarContenedor } from "@/lib/contenedoresStore";
 import { useContenedores } from "@/hooks/useContenedores";
+import { ZONAS_PREDEFINIDAS } from "@/lib/zonas";
 import type { Contenedor, EstadoContenedor, MaterialReciclaje } from "@/types/schema";
 
 import "leaflet/dist/leaflet.css";
@@ -465,14 +466,19 @@ export default function NuevoContenedorModal({
             >
               Zona (opcional)
             </label>
-            <input
+            <select
               id="zona-contenedor"
-              type="text"
-              placeholder="Ej. Zona Norte"
               value={zona}
               onChange={(evento) => setZona(evento.target.value)}
-              className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-900 outline-none transition-colors placeholder:text-zinc-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
-            />
+              className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-900 outline-none transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
+            >
+              <option value="">Sin zona</option>
+              {ZONAS_PREDEFINIDAS.map((z) => (
+                <option key={z} value={z}>
+                  {z}
+                </option>
+              ))}
+            </select>
           </div>
 
           <fieldset className="flex flex-col gap-2">

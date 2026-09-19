@@ -48,6 +48,7 @@ interface MapaProps {
   ajustarVistaARuta?: boolean;
   paradasRuta?: UbicacionPunto[];
   indiceParadaActual?: number;
+  enfocarEn?: UbicacionPunto;
   rol?: RolUsuario | null;
 }
 
@@ -115,6 +116,7 @@ function MapaContenedores({
   ajustarVistaARuta = true,
   paradasRuta = undefined,
   indiceParadaActual = undefined,
+  enfocarEn = undefined,
   rol = null,
 }: MapaProps) {
   const contenedorRef = useRef<HTMLDivElement>(null);
@@ -404,6 +406,12 @@ return () => {
       activo = false;
     };
   }, [rutaPuntos, mapaListo, ajustarVistaARuta]);
+
+  useEffect(() => {
+    if (!mapaListo || !mapaRef.current || !enfocarEn) return;
+    mapaRef.current.setView([enfocarEn.lat, enfocarEn.lng], 16, { animate: true });
+  }, [mapaListo, enfocarEn]);
+
 
   return (
     <div className={`relative h-full w-full overflow-hidden ${className}`} style={{ height: altura }}>

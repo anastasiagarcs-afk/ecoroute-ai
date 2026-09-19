@@ -538,6 +538,7 @@ export interface DatosActualizacionContenedor {
   nivelLlenado: number;
   tipoResiduo: TipoResiduo;
   estado: EstadoContenedor;
+  zona?: string | null;
 }
 
 export async function vaciarContenedor(idContenedor: string): Promise<void> {
@@ -629,6 +630,7 @@ export async function actualizarContenedor(
           nivel_llenado: datos.nivelLlenado,
           tipo_residuo: datos.tipoResiduo,
           estado: datos.estado,
+          zona: datos.zona ?? null,
           ultima_lectura: new Date().toISOString(),
         })
         .eq("id", idContenedor);
@@ -650,6 +652,7 @@ export async function actualizarContenedor(
           nivel_llenado: datos.nivelLlenado,
           tipo_residuo: datos.tipoResiduo,
           estado: datos.estado,
+          zona: datos.zona !== undefined ? datos.zona : contenedor.zona,
           ultima_lectura: new Date().toISOString(),
         }
       : contenedor

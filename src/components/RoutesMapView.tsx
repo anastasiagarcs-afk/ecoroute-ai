@@ -51,6 +51,12 @@ export default function RoutesMapView({
   }, []);
 
   const rutaPuntos = ruta?.geometria ?? rutaHistorial?.geometria ?? [];
+  const paradasContenedores: UbicacionPunto[] =
+    ruta?.puntos
+      .map((p) => p.contenedor.ubicacion)
+      .filter((u): u is UbicacionPunto => u !== null) ??
+    rutaHistorial?.geometria ??
+    [];
 
   return (
     <div className="grid w-full grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
@@ -60,22 +66,22 @@ export default function RoutesMapView({
           centro={centro}
           zoom={zoom}
           rutaPuntos={rutaPuntos}
-          paradasRuta={rutaPuntos}
+          paradasRuta={paradasContenedores}
           indiceParadaActual={indiceParadaActual}
           rol={rol}
         />
 
-        {rutaPuntos.length > 0 && (
+        {paradasContenedores.length > 0 && (
           <div className="absolute bottom-3 left-3 z-[1000] flex max-w-[calc(100%-1.5rem)] items-center gap-2 rounded-lg border border-emerald-300 bg-white/95 px-3 py-1.5 shadow-md backdrop-blur dark:border-emerald-500/40 dark:bg-zinc-900/95">
             <span className="min-w-0 truncate text-xs font-medium text-emerald-800 dark:text-emerald-300">
               Parada actual ·{" "}
-              <strong>{indiceParadaActual + 1}</strong> de {rutaPuntos.length}
+              <strong>{indiceParadaActual + 1}</strong> de {paradasContenedores.length}
             </span>
-            {indiceParadaActual < rutaPuntos.length - 1 ? (
+            {indiceParadaActual < paradasContenedores.length - 1 ? (
               <button
                 type="button"
                 onClick={() =>
-                  setIndiceParadaActual((indice) => Math.min(indice + 1, rutaPuntos.length - 1))
+                  setIndiceParadaActual((indice) => Math.min(indice + 1, paradasContenedores.length - 1))
                 }
                 className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700"
               >

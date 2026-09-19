@@ -184,6 +184,12 @@ export async function optimizarRuta(
     inicio
   );
 
+  if (orden.length < 2) {
+    throw new Error(
+      "No se puede generar la ruta: Se requieren al menos 2 contenedores con ubicación válida para optimizar un recorrido."
+    );
+  }
+
   const puntosObjetivo = orden.map((contenedor) => contenedor.ubicacion);
   const waypoints = inicio ? [inicio, ...puntosObjetivo] : puntosObjetivo;
 

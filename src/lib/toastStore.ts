@@ -1,4 +1,4 @@
-export type TipoNotificacionToast = "exito" | "error" | "info";
+export type TipoNotificacionToast = "exito" | "error" | "info" | "advertencia";
 
 export interface NotificacionToast {
   id: number;

@@ -6,6 +6,7 @@ import {
   obtenerReglaMaterialGamificacion,
 } from "@/lib/gamificacion";
 import { actualizarContenedor } from "@/lib/contenedoresStore";
+import { ZONAS_PREDEFINIDAS } from "@/lib/zonas";
 import type {
   Contenedor,
   EstadoContenedor,
@@ -43,6 +44,7 @@ export default function EditarContenedorModal({
     String(Math.round(contenedor.nivel_llenado))
   );
   const [estado, setEstado] = useState<EstadoContenedor>(contenedor.estado);
+  const [zona, setZona] = useState(contenedor.zona ?? "");
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,6 +68,7 @@ export default function EditarContenedorModal({
         nivelLlenado: nivel,
         tipoResiduo,
         estado,
+        zona: zona.trim() || null,
       });
       onCerrar();
     } catch (fallo) {
@@ -180,6 +183,28 @@ export default function EditarContenedorModal({
               }}
               className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-900 outline-none transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
             />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label
+              htmlFor="zona-editar"
+              className="text-sm font-semibold text-zinc-900 dark:text-zinc-50"
+            >
+              Zona (opcional)
+            </label>
+            <select
+              id="zona-editar"
+              value={zona}
+              onChange={(evento) => setZona(evento.target.value)}
+              className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-900 outline-none transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
+            >
+              <option value="">Sin zona</option>
+              {ZONAS_PREDEFINIDAS.map((z) => (
+                <option key={z} value={z}>
+                  {z}
+                </option>
+              ))}
+            </select>
           </div>
 
           <fieldset className="flex flex-col gap-2">

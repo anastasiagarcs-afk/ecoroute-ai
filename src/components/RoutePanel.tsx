@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import ConfirmarEliminarContenedorModal from "@/components/ConfirmarEliminarContenedorModal";
 import EditarContenedorModal from "@/components/EditarContenedorModal";
+import RutaPersonalizadaModal from "@/components/RutaPersonalizadaModal";
+import type { FiltrosRutaPersonalizada } from "@/components/RutaPersonalizadaModal";
 import {
   UMBRAL_CRITICO,
   esContenedorCritico,
@@ -28,10 +30,12 @@ import {
 import { vaciarContenedor } from "@/lib/contenedoresStore";
 import { puede } from "@/lib/rolesAutorizados";
 import { obtenerSnapshotSesion } from "@/lib/authService";
+import { mostrarToast } from "@/lib/toastStore";
 import type { RegistroHistorialRuta } from "@/lib/historialRutas";
 import type {
   Contenedor,
   EstadoContenedor,
+  MaterialReciclaje,
   Ruta,
   UbicacionPunto,
   Usuario,
@@ -116,6 +120,8 @@ export default function RoutePanel({
   const [mostrarRutasGuardadas, setMostrarRutasGuardadas] = useState(false);
   const [rutaGuardadaSeleccionada, setRutaGuardadaSeleccionada] = useState<Ruta | null>(null);
   const [asignandoRutaGuardada, setAsignandoRutaGuardada] = useState(false);
+
+  const [mostrarModalPersonalizada, setMostrarModalPersonalizada] = useState(false);
 
   const sesion = useSyncExternalStore(
     () => () => {},
@@ -225,12 +231,70 @@ export default function RoutePanel({
           `No hay contenedores con nivel ≥ ${UMBRAL_CRITICO}% para trazar la ruta.`
         );
       }
+      if (criticos.length < 2) {
+        mostrarToast(
+          "Contenedores insuficientes",
+          "No se puede generar la ruta: Se requieren al menos 2 contenedores seleccionados para optimizar un recorrido.",
+          "advertencia"
+        );
+        setGenerando(false);
+        return;
+      }
       const nueva = await optimizarRuta(criticos, { inicio: centroInicial ?? null });
       setRuta(nueva);
       onRutaGenerada?.(nueva);
     } catch (error) {
       setErrorAccion(
         error instanceof Error ? error.message : "No se pudo calcular la ruta."
+      );
+    } finally {
+      setGenerando(false);
+    }
+  };
+
+  const generarRutaPersonalizada = async (filtros: FiltrosRutaPersonalizada) => {
+    setMostrarModalPersonalizada(false);
+    setGenerando(true);
+    setGuardadoOk(false);
+    setErrorAccion(null);
+    try {
+      const filtrados = contenedores.filter((c) => {
+        if (filtros.zona && c.zona !== filtros.zona) return false;
+        if (filtros.estados.length > 0 && !filtros.estados.includes(c.estado))
+          return false;
+        if (
+          filtros.tiposResiduo.length > 0 &&
+          !filtros.tiposResiduo.includes(c.tipo_residuo as MaterialReciclaje)
+        )
+          return false;
+        if (c.nivel_llenado < filtros.nivelMinimo) return false;
+        return true;
+      });
+
+      if (filtrados.length === 0) {
+        throw new Error(
+          "No hay contenedores que cumplan con todos los filtros seleccionados."
+        );
+      }
+      if (filtrados.length < 2) {
+        mostrarToast(
+          "Contenedores insuficientes",
+          "No se puede generar la ruta: Se requieren al menos 2 contenedores seleccionados para optimizar un recorrido.",
+          "advertencia"
+        );
+        setGenerando(false);
+        return;
+      }
+
+      const nueva = await optimizarRuta(filtrados, {
+        inicio: centroInicial ?? null,
+        minimoContenedores: 1,
+      });
+      setRuta(nueva);
+      onRutaGenerada?.(nueva);
+    } catch (error) {
+      setErrorAccion(
+        error instanceof Error ? error.message : "No se pudo calcular la ruta personalizada."
       );
     } finally {
       setGenerando(false);
@@ -605,13 +669,22 @@ export default function RoutePanel({
           )}
         </section>
 
-        <button
-          onClick={generarRuta}
-          disabled={!hayUbicacion || generando || criticos.length === 0}
-          className="w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {generando ? "Calculando ruta…" : "Generar ruta óptima"}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={generarRuta}
+            disabled={!hayUbicacion || generando || criticos.length === 0}
+            className="flex-1 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {generando ? "Calculando ruta…" : "Generar ruta óptima"}
+          </button>
+          <button
+            onClick={() => setMostrarModalPersonalizada(true)}
+            disabled={!hayUbicacion || generando || contenedores.length === 0}
+            className="flex-1 rounded-xl border border-emerald-600 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-emerald-500 dark:text-emerald-400 dark:hover:bg-emerald-500/10"
+          >
+            {generando ? "Calculando…" : "Generar ruta personalizada"}
+          </button>
+        </div>
 
         {errorAccion && (
           <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-500/10 dark:text-red-400">
@@ -825,6 +898,12 @@ export default function RoutePanel({
         <ConfirmarEliminarContenedorModal
           contenedor={contenedorAEliminar}
           onCerrar={() => setContenedorAEliminar(null)}
+        />
+      )}
+      {mostrarModalPersonalizada && (
+        <RutaPersonalizadaModal
+          onAplicar={generarRutaPersonalizada}
+          onCerrar={() => setMostrarModalPersonalizada(false)}
         />
       )}
     </div>

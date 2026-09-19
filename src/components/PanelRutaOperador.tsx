@@ -9,6 +9,7 @@ interface PanelRutaOperadorProps {
   ruta: Ruta;
   contenedores: Contenedor[];
   onRutaCompletada?: () => void;
+  onContenedorVaciado?: () => void;
   onCerrar?: () => void;
 }
 
@@ -21,6 +22,7 @@ export default function PanelRutaOperador({
   ruta,
   contenedores,
   onRutaCompletada,
+  onContenedorVaciado,
   onCerrar,
 }: PanelRutaOperadorProps) {
   const [guardando, setGuardando] = useState(false);
@@ -48,6 +50,7 @@ export default function PanelRutaOperador({
       if (idsPendientes.length > 0) {
         try {
           await vaciarContenedoresLote(idsPendientes);
+          onContenedorVaciado?.();
         } catch (err) {
           console.warn(
             "[EcoRoute] Error al vaciar contenedores (no bloqueante):",
