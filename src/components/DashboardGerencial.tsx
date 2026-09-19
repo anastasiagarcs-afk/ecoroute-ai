@@ -95,7 +95,6 @@ export default function DashboardGerencial() {
 
   const [predicciones, setPredicciones] = useState<PrediccionContenedor[]>([]);
   const [analizandoPrediccion, setAnalizandoPrediccion] = useState(false);
-  const [panelPrediccionesVisible, setPanelPrediccionesVisible] = useState(true);
 
   const formatearHoras = (horas: number): string => {
     const horasCercanas = Math.max(0, horas);
@@ -109,7 +108,6 @@ export default function DashboardGerencial() {
   };
 
   const ejecutarPrediccionIA = async () => {
-    setPanelPrediccionesVisible(true);
     setAnalizandoPrediccion(true);
     try {
       const resultado = await analizarContenedores(contenedoresFiltrados);
@@ -331,7 +329,6 @@ export default function DashboardGerencial() {
         />
       </div>
 
-      {panelPrediccionesVisible && (
       <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         <div className="mb-3 flex items-center justify-between gap-2">
           <div>
@@ -351,14 +348,16 @@ export default function DashboardGerencial() {
             >
               {analizandoPrediccion ? "Analizando…" : "Analizar con IA"}
             </button>
-            <button
-              type="button"
-              onClick={() => setPanelPrediccionesVisible(false)}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
-              title="Ocultar panel"
-            >
-              ✕
-            </button>
+            {predicciones.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setPredicciones([])}
+                className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+                title="Limpiar resultados"
+              >
+                ✕
+              </button>
+            )}
           </div>
         </div>
         {predicciones.length === 0 ? (
@@ -429,7 +428,6 @@ export default function DashboardGerencial() {
           </div>
         )}
       </div>
-      )}
 
       <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         <div className="mb-3 flex items-center justify-between gap-2">
