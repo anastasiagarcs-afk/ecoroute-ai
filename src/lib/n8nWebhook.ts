@@ -1,4 +1,4 @@
-import type { MaterialReciclaje } from "@/types/schema";
+import type { MaterialReciclaje, TipoNotificacion } from "@/types/schema";
 
 export interface PayloadRegistroN8N {
   usuario_id: string;
@@ -14,6 +14,20 @@ export interface RespuestaRegistroN8N {
   totalPuntos?: number;
   transaccionId?: string;
   mensaje?: string;
+}
+
+export interface PayloadAlertaN8N {
+  tipo?: TipoNotificacion;
+  mensaje: string;
+  contenedor_id?: string | null;
+  roles?: string[];
+  enlace?: string;
+}
+
+export interface RespuestaAlertaN8N {
+  ok: boolean;
+  count: number;
+  error?: string;
 }
 
 const TIEMPO_ESPERA_MS = 6000;
@@ -54,6 +68,51 @@ export async function enviarRegistroAN8N(
   } catch (error) {
     console.warn(
       "[EcoRoute] No se pudo alcanzar el webhook de n8n. Se usa el fallback a Supabase.",
+      error
+    );
+    return null;
+  } finally {
+    clearTimeout(temporizador);
+  }
+}
+
+export async function enviarAlertaAN8N(
+  payload: PayloadAlertaN8N
+): Promise<RespuestaAlertaN8N | null> {
+  const url = obtenerUrlWebhookN8N();
+  if (!url) return null;
+
+  const controlador = new AbortController();
+  const temporizador = setTimeout(() => controlador.abort(), TIEMPO_ESPERA_MS);
+
+  try {
+    const respuesta = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Webhook-Secret": process.env.N8N_WEBHOOK_SECRET ?? "",
+      },
+      body: JSON.stringify({
+        tipo: payload.tipo ?? "alerta_n8n",
+        mensaje: payload.mensaje,
+        contenedor_id: payload.contenedor_id ?? null,
+        roles: payload.roles ?? ["Admin", "Gerente"],
+        enlace: payload.enlace ?? "/#dashboard",
+      }),
+      signal: controlador.signal,
+    });
+
+    if (!respuesta.ok) {
+      console.warn(
+        `[EcoRoute] El webhook de n8n respondió con estado ${respuesta.status} al enviar alerta.`
+      );
+      return null;
+    }
+
+    return (await respuesta.json()) as RespuestaAlertaN8N;
+  } catch (error) {
+    console.warn(
+      "[EcoRoute] No se pudo enviar alerta al webhook de n8n.",
       error
     );
     return null;

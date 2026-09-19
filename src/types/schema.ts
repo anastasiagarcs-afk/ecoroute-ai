@@ -52,6 +52,7 @@ export type MaterialReciclaje =
 export type TipoNotificacion =
   | "alerta_llenado"
   | "alerta_predictiva"
+  | "alerta_n8n"
   | "solicitud_acceso"
   | "asignacion_ruta"
   | "jornada"
