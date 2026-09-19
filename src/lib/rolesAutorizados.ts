@@ -37,8 +37,6 @@ const PERMISOS: Record<RolUsuario, AccionSistema[]> = {
     "ver_dashboard",
     "ver_mapa",
     "gestionar_contenedores",
-    "vaciar_contenedor",
-    "editar_contenedor",
     "optimizar_rutas",
     "aprobar_solicitudes",
     "exportar_reportes",

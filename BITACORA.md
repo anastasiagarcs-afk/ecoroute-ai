@@ -1,5 +1,5 @@
 # Bitácora del Proyecto — EcoRoute AI
-> Documento generado automáticamente el 19 de septiembre de 2026 a las 03:24 p. m. por `npm run informe`. No editar a mano: se regenera desde el código para mantenerse al día.
+> Documento generado automáticamente el 19 de septiembre de 2026 a las 03:48 p. m. por `npm run informe`. No editar a mano: se regenera desde el código para mantenerse al día.
 > **Nota**: Este archivo es el registro cronológico automático. Para el informe académico formal, ver `INFORME_PROYECTO.md`.
 
 ## 1. Arquitectura y Stack Tecnológico
@@ -71,7 +71,7 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 | `src/lib/operadoresService.ts` | 393 | — |
 | `src/lib/reciclajeService.ts` | 279 | Servicio Supabase del módulo de reciclaje: usuario ciudadano actual, registro de entregas con webhook n8n (insert PuntosReciclaje + update Usuarios) y entregas recientes. |
 | `src/lib/reporteExportador.ts` | 237 | — |
-| `src/lib/rolesAutorizados.ts` | 74 | — |
+| `src/lib/rolesAutorizados.ts` | 72 | — |
 | `src/lib/routeOptimizer.ts` | 258 | Optimización de rutas con OSRM (perfiles vehiculares y pesos) y cálculo de ruta por distancia, con fallback a línea recta. |
 | `src/lib/supabaseClient.ts` | 69 | Cliente Supabase del navegador: sanitización de variables de entorno, validación de configuración y detección del modo de respaldo. |
 | `src/lib/supabaseServer.ts` | 29 | — |
