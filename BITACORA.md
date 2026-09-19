@@ -1,5 +1,5 @@
 # Bitácora del Proyecto — EcoRoute AI
-> Documento generado automáticamente el 19 de septiembre de 2026 a las 07:22 p. m. por `npm run informe`. No editar a mano: se regenera desde el código para mantenerse al día.
+> Documento generado automáticamente el 19 de septiembre de 2026 a las 07:56 p. m. por `npm run informe`. No editar a mano: se regenera desde el código para mantenerse al día.
 > **Nota**: Este archivo es el registro cronológico automático. Para el informe académico formal, ver `INFORME_PROYECTO.md`.
 
 ## 1. Arquitectura y Stack Tecnológico
@@ -21,34 +21,38 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 | --- | --- | --- |
 | Sprint 1 | Base de datos (schema + migraciones), mapas y monitoreo de contenedores | Completado |
 | Sprint 2 | Optimización de rutas (OSRM), historial y persistencia en Supabase | Completado |
-| Sprint 3 | Separación en la fuente, registro de reciclaje y gamificación | En Desarrollo |
+| Sprint 3 | Separación en la fuente, registro de reciclaje y gamificación | Completado |
+| Sprint 4 | Analítica, IA predictiva (Gemini), reportes y notificaciones | Completado |
+| Sprint 5 | Roles, autenticación, solicitudes de acceso y cierre de jornada | Completado |
+| Sprint 6 | Detección de anomalías, simulador IoT y Supabase Realtime | Completado |
+| Sprint 7 | Rediseño EcoCiudadano, documentación y auditoría del repositorio | Completado |
 
 ## 3. Componentes de la aplicación
 
 | Archivo | Export principal | Líneas | Descripción |
 | --- | --- | --- | --- |
-| `src/components/AnomaliasPanel.tsx` | AnomaliasPanel | 208 | — |
-| `src/components/CierreJornadaModal.tsx` | CierreJornadaModal | 263 | — |
+| `src/components/AnomaliasPanel.tsx` | AnomaliasPanel | 208 | Panel de anomalías activas: muestra KPIs de batería, temperatura y sensores sin señal, y tabla consolidada por contenedor con tipos de anomalía. |
+| `src/components/CierreJornadaModal.tsx` | CierreJornadaModal | 263 | Modal de cierre de jornada con dos modos: parcial (mantiene activa) y final (consolida día). |
 | `src/components/ConfirmarEliminarContenedorModal.tsx` | ConfirmarEliminarContenedorModal | 91 | Diálogo de confirmación para eliminar un contenedor en Supabase y quitar su marcador del mapa. |
 | `src/components/DashboardGerencial.tsx` | DashboardGerencial | 594 | Dashboard gerencial: KPIs (totales, promedio de llenado, críticos >80%, rutas ejecutadas), filtros por zona y rango de fechas, gráfico de barras de estado por zona y tabla de contenedores críticos con acción Atender/Vaciar. |
 | `src/components/EditarContenedorModal.tsx` | EditarContenedorModal | 268 | Modal para editar un contenedor existente: ajusta el porcentaje de llenado, el tipo de residuo y el estado (activo, vacío, mantenimiento, etc.), actualiza Supabase y refresca el marcador en el mapa. |
 | `src/components/GamificacionPanel.tsx` | GamificacionPanel | 179 | Panel de gamificación: puntos acumulados, nivel del ciudadano, barra de progreso y catálogo de recompensas. |
-| `src/components/HistorialAnomalias.tsx` | HistorialAnomalias | 253 | — |
-| `src/components/HistorialOperador.tsx` | HistorialOperador | 309 | — |
+| `src/components/HistorialAnomalias.tsx` | HistorialAnomalias | 253 | Historial de anomalías con filtros por tipo, severidad y rango de fechas; incluye exportación CSV. |
+| `src/components/HistorialOperador.tsx` | HistorialOperador | 309 | Panel dual del operador: columnas de jornadas (parciales/finales) y rutas completadas, con detalle expandible. |
 | `src/components/Map.tsx` | MapaContenedores | 442 | Mapa Leaflet interactivo: contenedores en tiempo real y polilínea de la ruta activa. |
-| `src/components/NavRol.tsx` | NavRol | 572 | — |
-| `src/components/NotificacionesOperador.tsx` | NotificacionesOperador | 132 | — |
+| `src/components/NavRol.tsx` | NavRol | 572 | Navegación por pestañas dinámica según el rol del usuario y permisos definidos en rolesAutorizados.ts. |
+| `src/components/NotificacionesOperador.tsx` | NotificacionesOperador | 132 | Campanita de notificaciones en tiempo real con dropdown de alertas y lectura. |
 | `src/components/NuevoContenedorModal.tsx` | NuevoContenedorModal | 593 | Modal para registrar nuevos contenedores (código, tipo de residuo, nivel, capacidad y coordenadas); inserta vía la función Supabase registrar_contenedor y el marcador aparece al instante en el mapa. |
-| `src/components/PanelAlertas.tsx` | PanelAlertas | 349 | — |
-| `src/components/PanelRutaOperador.tsx` | PanelRutaOperador | 208 | — |
+| `src/components/PanelAlertas.tsx` | PanelAlertas | 349 | Panel de administración de alertas: filtros, resolución, envío a n8n y acciones sobre alertas. |
+| `src/components/PanelRutaOperador.tsx` | PanelRutaOperador | 208 | Panel del operador para ejecutar y completar la ruta del día, con indicadores de progreso. |
 | `src/components/PopupContenedor.tsx` | PopupContenedor | 238 | Contenido en React del popup de cada marcador: información y estado del contenedor e icono con acciones Vaciar (0% y estado Vacío/Disponible), Editar y Eliminar. |
 | `src/components/RegistroReciclajeForm.tsx` | RegistroReciclajeForm | 244 | Formulario ciudadano para registrar entregas (material + peso en kg) con cálculo automático de puntos e inserción en Supabase. |
 | `src/components/RoutePanel.tsx` | RoutePanel | 963 | Panel de optimización de rutas: selector de contenedores, generación de ruta vía OSRM, persistencia en el historial, gestión de contenedores (vaciar, editar, eliminar) y reinicio a línea recta. |
 | `src/components/RoutesMapView.tsx` | RoutesMapView | 135 | Vista integrada de mapa + panel de rutas. Coordina la ruta generada y la ruta histórica inspeccionada sobre Leaflet. |
-| `src/components/RutaPersonalizadaModal.tsx` | RutaPersonalizadaModal | 232 | — |
+| `src/components/RutaPersonalizadaModal.tsx` | RutaPersonalizadaModal | 232 | Modal para crear una ruta personalizada seleccionando contenedores manualmente. |
 | `src/components/SeparacionGuia.tsx` | SeparacionGuia | 223 | Guía interactiva de separación en la fuente: tarjetas por tipo de residuo con qué depositar y qué evitar. |
 | `src/components/SeparacionModulo.tsx` | SeparacionModulo | 155 | Contenedor del módulo de Separación y Gamificación con navegación por pestañas. |
-| `src/components/SimuladorSensores.tsx` | SimuladorSensores | 80 | — |
+| `src/components/SimuladorSensores.tsx` | SimuladorSensores | 80 | Toggle de control del simulador IoT: activa/desactiva la generación de lecturas sintéticas cada 10 s. |
 | `src/components/ToastHost.tsx` | ToastHost | 121 | Host global de notificaciones (toasts) usando useSyncExternalStore; posicionado sobre el mapa con animación de entrada y colores por tipo (éxito, error, info). |
 
 ## 4. Rutas de la aplicación
@@ -64,20 +68,20 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 
 | Módulo | Líneas | Descripción |
 | --- | --- | --- |
-| `src/lib/adminService.ts` | 134 | — |
-| `src/lib/alertasService.ts` | 223 | — |
-| `src/lib/anomaliasService.ts` | 131 | — |
-| `src/lib/authService.ts` | 251 | — |
+| `src/lib/adminService.ts` | 134 | Operaciones de administrador: aprobación/rechazo de solicitudes de acceso y gestión de roles. |
+| `src/lib/alertasService.ts` | 223 | Gestión de alertas: obtiene, marca como leídas/atendidas, resuelve y envía alertas a n8n. |
+| `src/lib/anomaliasService.ts` | 131 | Servicio de detección de anomalías: clasifica sensores por batería crítica, temperatura extrema y pérdida de señal; exporta a CSV. |
+| `src/lib/authService.ts` | 251 | Autenticación y registro: login/logout con Supabase Auth, creación de solicitudes de acceso y registro directo de ciudadanos. |
 | `src/lib/contenedoresStore.ts` | 787 | Almacén de contenedores: carga y semilla desde Supabase, normalización de ubicación (objeto, GeoJSON, EWKT o WKB/EWKB hexadecimal con parseFloat), datos de respaldo en localStorage y registro, vaciado (0% y estado vacio), edición y eliminación en tiempo real. |
 | `src/lib/gamificacion.ts` | 190 | Lógica pura de gamificación: puntos por kg según material, niveles de ciudadano, progreso y catálogo de recompensas. |
 | `src/lib/geminiPredictiveService.ts` | 351 | Servicio predictivo con IA (HU-11/RF-24): obtiene el histórico de LecturasSensores desde Supabase (o sintetiza lecturas cuando no hay datos), ajusta un modelo de regresión lineal, consume opcionalmente la API de Gemini (NEXT_PUBLIC_GEMINI_API_KEY) y genera alertas predictivas que se persisten en la tabla Notificaciones (tipo 'alerta_predictiva'). |
 | `src/lib/historialRutas.ts` | 397 | Almacén de historial de rutas con persistencia en Supabase (tabla HistorialRutas), reintentos y respaldo en localStorage. |
-| `src/lib/jornadaService.ts` | 371 | — |
+| `src/lib/jornadaService.ts` | 371 | Lógica de cierre de jornada del operador: cierre parcial/final y persistencia en HistorialRutas. |
 | `src/lib/n8nWebhook.ts` | 122 | Cliente para webhook n8n: obtiene URL desde env, POST JSON con timeout 6s (AbortController), payload {usuario_id, contenedor_id, material, peso_kg, timestamp}, fallback a null si falla. |
-| `src/lib/operadoresService.ts` | 393 | — |
+| `src/lib/operadoresService.ts` | 393 | Servicios del operador: carga de rutas asignadas, completado y consulta de jornadas históricas. |
 | `src/lib/reciclajeService.ts` | 279 | Servicio Supabase del módulo de reciclaje: usuario ciudadano actual, registro de entregas con webhook n8n (insert PuntosReciclaje + update Usuarios) y entregas recientes. |
-| `src/lib/reporteExportador.ts` | 237 | — |
-| `src/lib/rolesAutorizados.ts` | 76 | — |
+| `src/lib/reporteExportador.ts` | 237 | Exportación de reportes gerenciales a CSV y PDF con filtros por zona y fechas. |
+| `src/lib/rolesAutorizados.ts` | 76 | Matriz de permisos por rol; define la función puede(rol, accion) con short-circuit de superusuario Admin. |
 | `src/lib/routeOptimizer.ts` | 258 | Optimización de rutas con OSRM (perfiles vehiculares y pesos) y cálculo de ruta por distancia, con fallback a línea recta. |
 | `src/lib/supabaseClient.ts` | 69 | Cliente Supabase del navegador: sanitización de variables de entorno, validación de configuración y detección del modo de respaldo. |
 | `src/lib/supabaseServer.ts` | 29 | — |

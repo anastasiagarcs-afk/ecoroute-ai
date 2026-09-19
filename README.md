@@ -17,8 +17,12 @@ EcoRoute AI monitorea contenedores de residuos en Ciudad Guayana, genera rutas o
 - **Registro de reciclaje y gamificacion**: puntos por kg segun material, niveles de ciudadano, catalogo de recompensas e historial de entregas.
 - **Integracion bidireccional con n8n**: webhook saliente para registro de reciclaje (fallback a Supabase) + API Route entrante `/api/webhooks/n8n` autenticada para recepcion de alertas externas.
 - **Sistema de alertas en tiempo real**: trigger SQL al >=80%, prediccion predictiva con Gemini AI, y recepcion de alertas desde n8n. Panel de administracion con filtros y resolucion de alertas.
+- **Deteccion de anomalias en sensores**: monitoreo de bateria (<20%), temperatura (>50°C) y sensores sin senal (>24h). KPIs, tabla consolidada por contenedor e historial con filtros y exportacion CSV (rol Gerente).
+- **Simulador de sensores IoT**: toggle en `/anomalias` que genera lecturas sinteticas cada 10s via `/api/simular-sensores`, con 5% de contenedores "sin senal" para pruebas de anomalias.
+- **Actualizacion en tiempo real (Supabase Realtime)**: suscripciones a INSERT/UPDATE en `LecturasSensores`, `Contenedores` y `Notificaciones` para refrescar anomalias, mapa y alertas automaticamente.
 - **Gestion de roles y permisos**: Admin, Gerente, Operador y Ciudadano con RLS por rol y solicitudes de acceso.
 - **Gestion de jornada del operador**: cierre parcial (mantiene tiempo activo) y cierre final (consolida metricas diarias), con diferenciacion en el historial y bypass RLS mediante RPC para completar rutas.
+- **EcoCiudadano**: modulo de separacion en la fuente renombrado, con tarjetas coloreadas por material (organico, plastico, vidrio, papel/carton, metal), registro de reciclaje, puntos y recompensas.
 - **Notificaciones toast** (exito / error / info) sobre el mapa.
 
 ## Stack tecnologico
@@ -27,32 +31,38 @@ EcoRoute AI monitorea contenedores de residuos en Ciudad Guayana, genera rutas o
 | --- | --- |
 | Frontend | Next.js 16 (App Router) + React 19 + TypeScript |
 | Estilos | Tailwind CSS v4 (responsive + modo claro/oscuro) |
+| Iconos | lucide-react (SVG vectoriales) |
 | Mapas | Leaflet 1.9 + tiles OpenStreetMap |
 | Rutas | OSRM (perfil vehicular) + heuristica TSP propia |
-| Backend | Supabase (PostgreSQL + PostgREST + Row Level Security + PostGIS) |
+| Backend | Supabase (PostgreSQL + PostgREST + Row Level Security + PostGIS + Realtime) |
 | IA | Google Gemini API (alertas predictivas de desbordamiento) |
-| Automatizacion | n8n (webhook bidireccional: registro de reciclaje + recepcion de alertas) |
+| Automatizacion | n8n (webhook bidireccional: registro de reciclaje + recepcion de alertas) + API Route simulador IoT |
 
 ## Estructura del proyecto
 
 ```
-+-- app/                              # Paginas (App Router)
-|   +-- page.tsx                      # Dashboard principal
-|   +-- layout.tsx                    # Layout raiz
-|   +-- admin/page.tsx                # Panel de administracion
-|   +-- acceso/page.tsx               # Login / registro
-|   +-- separacion/page.tsx           # Guias de separacion
-|   +-- api/webhooks/n8n/route.ts     # API Route: recepcion webhooks n8n
++-- app/                                  # Paginas (App Router)
+|   +-- page.tsx                          # Dashboard principal (por rol)
+|   +-- layout.tsx                        # Layout raiz
+|   +-- admin/page.tsx                    # Panel de administracion
+|   +-- acceso/page.tsx                   # Login / registro
+|   +-- separacion/page.tsx               # EcoCiudadano (guias de separacion)
+|   +-- anomalias/page.tsx                # Deteccion de anomalias (Gerente)
+|   +-- reportes/page.tsx                 # Reportes completos (Admin)
+|   +-- api/
+|   |   +-- webhooks/n8n/route.ts         # API Route: recepcion webhooks n8n
+|   |   +-- simular-sensores/route.ts     # API Route: simulador IoT
 +-- src/
-|   +-- components/                   # 19 componentes modulares
-|   +-- lib/                          # 17 modulos de logica de negocio
-|   +-- hooks/                        # Custom hooks (useMapEffect)
-|   +-- types/schema.ts               # Modelo tipado de datos
-+-- supabase/migrations/              # 36 migraciones SQL idempotentes
-+-- scripts/                          # Generador de informes y seed de admin
-+-- PLAN_PROYECTO.md                  # Plan de trabajo y sprints
-+-- INFORME_PROYECTO.md               # Informe academico formal (13 incisos)
-+-- BITACORA.md                       # Bitacora generada automaticamente
+|   +-- components/                       # 23 componentes modulares
+|   +-- lib/                              # 19 modulos de logica de negocio
+|   +-- hooks/                            # Custom hooks (useContenedores)
+|   +-- types/schema.ts                   # Modelo tipado de datos
++-- supabase/migrations/                  # 36 migraciones SQL idempotentes
++-- scripts/                              # Generador de informes y seed de admin
++-- PLAN_PROYECTO.md                      # Plan de trabajo y sprints
++-- INFORME_PROYECTO.md                   # Informe academico formal
++-- BITACORA.md                           # Bitacora generada automaticamente
++-- README.md                             # Este archivo
 ```
 
 ## Requisitos previos
@@ -100,6 +110,13 @@ Crea `admin@ecoroute.com` / `Admin123456!` en Supabase Auth + tabla Usuarios.
 
 > La aplicacion funciona en **modo de respaldo local** si Supabase no esta configurado: los contenedores demo se cargan desde `CONTENEDORES_FALLBACK` y el historial desde `localStorage`.
 
+## Endpoints
+
+| Ruta | Metodo | Descripcion |
+|---|---|---|
+| `/api/simular-sensores` | POST | Genera lecturas sinteticas para todos los contenedores (95% activos, 5% sin senal). Requiere `SUPABASE_SERVICE_ROLE_KEY`. |
+| `/api/webhooks/n8n` | POST | Recepcion de alertas externas desde n8n. Requiere header `X-Webhook-Secret`. |
+
 ## Scripts
 
 | Comando | Descripcion |
@@ -127,6 +144,8 @@ npm run build      # compilacion de produccion
 | 3 | Separacion en la fuente, reciclaje, gamificacion y dashboard gerencial | Completado |
 | 4 | Analitica, IA predictiva (Gemini), reportes y notificaciones | Completado |
 | 5 | Roles, solicitudes de acceso y cierre de jornada del operador | Completado |
+| 6 | Deteccion de anomalias, simulador IoT y Supabase Realtime | Completado |
+| 7 | Rediseño EcoCiudadano, documentacion y auditoria del repositorio | Completado |
 
 Ver `PLAN_PROYECTO.md` e `INFORME_PROYECTO.md` para el detalle de requerimientos (RF/RNF), historias de usuario y arquitectura.
 

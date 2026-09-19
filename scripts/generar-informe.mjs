@@ -30,6 +30,26 @@ const DESCRIPCIONES_COMPONENTES = {
     "Contenido en React del popup de cada marcador: información y estado del contenedor e icono con acciones Vaciar (0% y estado Vacío/Disponible), Editar y Eliminar.",
   "ToastHost.tsx":
     "Host global de notificaciones (toasts) usando useSyncExternalStore; posicionado sobre el mapa con animación de entrada y colores por tipo (éxito, error, info).",
+  "AnomaliasPanel.tsx":
+    "Panel de anomalías activas: muestra KPIs de batería, temperatura y sensores sin señal, y tabla consolidada por contenedor con tipos de anomalía.",
+  "HistorialAnomalias.tsx":
+    "Historial de anomalías con filtros por tipo, severidad y rango de fechas; incluye exportación CSV.",
+  "HistorialOperador.tsx":
+    "Panel dual del operador: columnas de jornadas (parciales/finales) y rutas completadas, con detalle expandible.",
+  "NavRol.tsx":
+    "Navegación por pestañas dinámica según el rol del usuario y permisos definidos en rolesAutorizados.ts.",
+  "NotificacionesOperador.tsx":
+    "Campanita de notificaciones en tiempo real con dropdown de alertas y lectura.",
+  "PanelAlertas.tsx":
+    "Panel de administración de alertas: filtros, resolución, envío a n8n y acciones sobre alertas.",
+  "PanelRutaOperador.tsx":
+    "Panel del operador para ejecutar y completar la ruta del día, con indicadores de progreso.",
+  "RutaPersonalizadaModal.tsx":
+    "Modal para crear una ruta personalizada seleccionando contenedores manualmente.",
+  "SimuladorSensores.tsx":
+    "Toggle de control del simulador IoT: activa/desactiva la generación de lecturas sintéticas cada 10 s.",
+  "CierreJornadaModal.tsx":
+    "Modal de cierre de jornada con dos modos: parcial (mantiene activa) y final (consolida día).",
 };
 
 const DESCRIPCIONES_LIB = {
@@ -51,6 +71,22 @@ const DESCRIPCIONES_LIB = {
     "Cliente para webhook n8n: obtiene URL desde env, POST JSON con timeout 6s (AbortController), payload {usuario_id, contenedor_id, material, peso_kg, timestamp}, fallback a null si falla.",
   "geminiPredictiveService.ts":
     "Servicio predictivo con IA (HU-11/RF-24): obtiene el histórico de LecturasSensores desde Supabase (o sintetiza lecturas cuando no hay datos), ajusta un modelo de regresión lineal, consume opcionalmente la API de Gemini (NEXT_PUBLIC_GEMINI_API_KEY) y genera alertas predictivas que se persisten en la tabla Notificaciones (tipo 'alerta_predictiva').",
+  "anomaliasService.ts":
+    "Servicio de detección de anomalías: clasifica sensores por batería crítica, temperatura extrema y pérdida de señal; exporta a CSV.",
+  "alertasService.ts":
+    "Gestión de alertas: obtiene, marca como leídas/atendidas, resuelve y envía alertas a n8n.",
+  "authService.ts":
+    "Autenticación y registro: login/logout con Supabase Auth, creación de solicitudes de acceso y registro directo de ciudadanos.",
+  "adminService.ts":
+    "Operaciones de administrador: aprobación/rechazo de solicitudes de acceso y gestión de roles.",
+  "jornadaService.ts":
+    "Lógica de cierre de jornada del operador: cierre parcial/final y persistencia en HistorialRutas.",
+  "operadoresService.ts":
+    "Servicios del operador: carga de rutas asignadas, completado y consulta de jornadas históricas.",
+  "reporteExportador.ts":
+    "Exportación de reportes gerenciales a CSV y PDF con filtros por zona y fechas.",
+  "rolesAutorizados.ts":
+    "Matriz de permisos por rol; define la función puede(rol, accion) con short-circuit de superusuario Admin.",
 };
 
 function listarArchivos(directorio, extension, recursivo = false) {
@@ -190,7 +226,11 @@ const secciones = [
   "| --- | --- | --- |",
   "| Sprint 1 | Base de datos (schema + migraciones), mapas y monitoreo de contenedores | Completado |",
   "| Sprint 2 | Optimización de rutas (OSRM), historial y persistencia en Supabase | Completado |",
-  "| Sprint 3 | Separación en la fuente, registro de reciclaje y gamificación | En Desarrollo |",
+  "| Sprint 3 | Separación en la fuente, registro de reciclaje y gamificación | Completado |",
+  "| Sprint 4 | Analítica, IA predictiva (Gemini), reportes y notificaciones | Completado |",
+  "| Sprint 5 | Roles, autenticación, solicitudes de acceso y cierre de jornada | Completado |",
+  "| Sprint 6 | Detección de anomalías, simulador IoT y Supabase Realtime | Completado |",
+  "| Sprint 7 | Rediseño EcoCiudadano, documentación y auditoría del repositorio | Completado |",
   "",
   "## 3. Componentes de la aplicación",
   "",

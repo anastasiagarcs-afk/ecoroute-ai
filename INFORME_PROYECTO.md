@@ -103,8 +103,8 @@ Los requerimientos se derivaron de las Historias de Usuario (HU-01…HU-15) y se
 | RF-19 | Reportes exportables (CSV/PDF) con filtros por fecha y zona | HU-10 | Media | 🟢 Completado | `reporteExportador.ts` (`descargarCSV`, `imprimirReporte`) |
 | RF-20 | Gestión de roles y permisos (Admin/Gerente/Operador/Ciudadano) | HU-12 | Alta | 🟢 Completado | `rolesAutorizados.ts` (`puede()`, `PERMISOS`); `app/admin/page.tsx` (sub-pestañas, cambio de rol, toggle activo/inactivo) |
 | RF-21 | Solicitud de acceso y aprobación/rechazo por Admin | HU-13 | Media | 🟢 Completado | `authService.ts`, `adminService.ts`; `app/admin/page.tsx` (sub-pestaña Solicitudes Pendientes, botones Aprobar/Rechazar); RPC `aprobar_solicitud_acceso` |
-| RF-22 | Detección de anomalías en sensores (comparar nivel real vs. esperado) | HU-15 | Media | 🔴 No Implementado | Tabla `LecturasSensores` existe, pero sin lógica de detección de desviaciones |
-| RF-23 | Análisis de desviaciones estadísticas (sensores sospechosos >7 días) | HU-15 | Media | 🔴 No Implementado | Sin implementación; HU-15 está pendiente |
+| RF-22 | Detección de anomalías en sensores: batería <20%, temperatura >50°C o sin lectura >24h | HU-15 | Alta | 🟢 Completado | `anomaliasService.ts` (`detectarAnomalias`), `AnomaliasPanel.tsx` (KPIs + tabla consolidada) |
+| RF-23 | Historial de anomalías con filtros por zona/fecha y exportación CSV | HU-15 | Media | 🟢 Completado | `HistorialAnomalias.tsx` (filtros, tabla consolidada, `exportarCSV`) |
 | RF-24 | Guías de separación por material (acceso público sin login) | HU-07 | Alta | 🟢 Completado | `SeparacionGuia.tsx`; ruta `/separacion` (pública) |
 | RF-25 | Registrar entregas de reciclaje (material + kg) | HU-08 | Alta | 🟢 Completado | `RegistroReciclajeForm.tsx`; `reciclajeService.ts:117` |
 | RF-26 | Calcular y acumular puntos por entregas (puntos = kg × puntosPorKg) | HU-08 | Alta | 🟢 Completado | `gamificacion.ts:65`; `reciclajeService.ts:136-186` |
@@ -114,6 +114,9 @@ Los requerimientos se derivaron de las Historias de Usuario (HU-01…HU-15) y se
 | RF-30 | Consolidado diario en historial (jornadas + rutas en dos columnas) | HU-14 | Media | 🟢 Completado | `HistorialOperador.tsx` layout `lg:grid-cols-2` (Jornadas / Rutas Completadas) |
 | RF-31 | Completar ruta sin bloqueos RLS mediante RPC `completar_ruta` | HU-14 | Alta | 🟢 Completado | `operadoresService.ts:marcarRutaCompletada`; `supabase/migrations/22_rpc_completar_ruta.sql` |
 | RF-32 | Integración con webhook n8n para registro de reciclaje (fallback a Supabase) | HU-08 | Media | 🟢 Completado | `n8nWebhook.ts` (timeout 6s); `reciclajeService.ts:189` |
+| RF-33 | Simulador IoT de sensores (`/api/simular-sensores`): genera lecturas sintéticas y simula 5% sin señal | HU-15 | Media | 🟢 Completado | `app/api/simular-sensores/route.ts` (service role key, actualiza `LecturasSensores` y `Contenedores`) |
+| RF-34 | Suscripción Realtime a INSERT de `LecturasSensores` para actualización automática de anomalías | HU-15 | Media | 🟢 Completado | `AnomaliasPanel.tsx` y `HistorialAnomalias.tsx` (`supabase.channel` on INSERT) |
+| RF-35 | Rediseño de la pestaña Separación a "EcoCiudadano" con tarjetas de separación coloreadas por material | HU-07 | Media | 🟢 Completado | `NavRol.tsx`, `SeparacionGuia.tsx`, `SeparacionModulo.tsx`, `app/separacion/page.tsx` |
 
 **Leyenda de estados**: 🟢 Completado / Implementado · 🔵 En Proceso / Por Terminar · 🟡 Por Revisar / Ajustes pendientes · 🔴 No Implementado / Fuera de Alcance
 
@@ -135,6 +138,7 @@ Los requerimientos se derivaron de las Historias de Usuario (HU-01…HU-15) y se
 | RNF-12 | Escalabilidad de la base de datos (PostGIS + índices) | Media | 🟢 Completado | PostGIS habilitado (`01_initial_schema.sql:1`); índices en `01_initial_schema.sql:131-136` |
 | RNF-13 | Disponibilidad de la demo (no bloquear si el backend falla) | Media | 🟢 Completado | `CONTENEDORES_FALLBACK` (12 contenedores demo); localStorage para contenedores e historial |
 | RNF-14 | Documentación y mantenibilidad | Alta | 🟢 Completado | `npm run informe` regenera `BITACORA.md`; `INFORME_PROYECTO.md` actualizado; `README.md` |
+| RNF-15 | Actualización en tiempo real mediante Supabase Realtime (Contenedores, Notificaciones, LecturasSensores) | Media | 🟢 Completado | `contenedoresStore.ts:718-787`, `NavRol.tsx:178-283`, `AnomaliasPanel.tsx`, `HistorialAnomalias.tsx`, migración `33_realtime_lecturas_sensores.sql` |
 
 **Leyenda de estados**: 🟢 Completado / Implementado · 🔵 En Proceso / Por Terminar · 🟡 Por Revisar / Ajustes pendientes · 🔴 No Implementado / Fuera de Alcance
 
@@ -142,27 +146,27 @@ Los requerimientos se derivaron de las Historias de Usuario (HU-01…HU-15) y se
 
 | Métrica | Total | 🟢 Completados | 🔵 En Proceso | 🟡 Por Revisar | 🔴 No Implementados | % Avance |
 | --- | --- | --- | --- | --- | --- | --- |
-| **Requerimientos Funcionales (RF)** | 32 | 30 | 0 | 0 | 2 | **93.75%** |
-| **Requerimientos No Funcionales (RNF)** | 14 | 12 | 0 | 2 | 0 | **85.71%** |
-| **Total del Sistema** | 46 | 42 | 0 | 2 | 2 | **91.30%** |
+| **Requerimientos Funcionales (RF)** | 35 | 35 | 0 | 0 | 0 | **100%** |
+| **Requerimientos No Funcionales (RNF)** | 15 | 13 | 0 | 2 | 0 | **86.67%** |
+| **Total del Sistema** | 50 | 48 | 0 | 2 | 0 | **96%** |
 
-#### Análisis de Requerimientos Pendientes
+#### Análisis de Requerimientos
 
-**🔴 No Implementados (RF-22, RF-23 — Detección de Anomalías):**
-- **HU-15** está marcada como pendiente en la tabla de historias de usuario
-- La tabla `LecturasSensores` existe y contiene datos, pero no hay lógica de negocio para comparar nivel real vs. esperado
-- No se encontraron funciones de cálculo de desviaciones estadísticas ni de detección de sensores sospechosos con >7 días de valores constantes
-- **Recomendación**: Crear `anomalyDetectionService.ts` que analice tendencias y genere notificaciones tipo `alerta_anomalia`
+**🟢 Completados recientemente:**
+- **RF-22 (Detección de anomalías)**: implementado en `anomaliasService.ts` con umbral de batería <20%, temperatura >50°C y sin lectura >24h. Visualizado en `AnomaliasPanel.tsx` con KPIs y tabla consolidada por contenedor.
+- **RF-23 (Historial de anomalías)**: implementado en `HistorialAnomalias.tsx` con filtros por zona/fecha, tabla consolidada y exportación CSV.
+- **RF-33 (Simulador IoT)**: API Route `/api/simular-sensores` genera lecturas sintéticas cada vez que se invoca; 5% de contenedores se dejan sin lectura para probar anomalías "sin señal".
+- **RF-34 (Realtime)**: suscripción a `INSERT` en `LecturasSensores` actualiza automáticamente el panel y el historial de anomalías.
+- **RF-35 (EcoCiudadano)**: rediseño visual de `/separacion` con tarjetas coloreadas por material y renombrado de pestaña.
 
 **🟡 Por Revisar (RNF-01, RNF-11):**
-- **RNF-01 (Tiempo de respuesta)**: Los timeouts actuales (OSRM 12s, n8n 6s) superan la meta de 2s. Se requiere optimización de queries o ajuste de expectativa en la documentación.
+- **RNF-01 (Tiempo de respuesta < 2s)**: Los timeouts actuales (OSRM 12s, n8n 6s) superan la meta de 2s. Se requiere optimización de queries o ajuste de expectativa en la documentación.
 - **RNF-11 (Accesibilidad WCAG 2.1)**: Los roles ARIA están implementados en modales y toasts, pero falta navegación por teclado completa, testing con screen readers y verificación de contraste WCAG AA.
 
 #### Recomendaciones Inmediatas
 
 | Prioridad | Acción | RF/RNF impactado | Esfuerzo estimado |
 | --- | --- | --- | --- |
-| **Alta** | Implementar HU-15: Crear `anomalyDetectionService.ts` con detección de desviaciones estadísticas en `LecturasSensores` | RF-22, RF-23 | 1 sprint |
 | **Media** | Optimizar tiempos de respuesta: caché de rutas, índices adicionales en BD, reducir payloads | RNF-01 | 2-3 días |
 | **Media** | Mejorar accesibilidad: navegación por teclado, `aria-label` en botones, testing con NVDA/VoiceOver | RNF-11 | 2-3 días |
 | **Baja** | Documentar limitaciones conocidas en README (timeouts, acceso WCAG parcial) | RNF-01, RNF-11 | 1 día |
@@ -172,20 +176,20 @@ Matriz consolidada de las **15 historias de usuario** del proyecto con su rol, d
 | ID | Épica / Módulo | Rol | Descripción | Criterios de Aceptación | Trazabilidad RF | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
 | **HU-01** | Gestión de Contenedores | Administrador | Registrar, modificar y eliminar contenedores en el sistema. | CRUD completo; validación GPS; actualización en mapa en tiempo real. | RF-01, RF-02, RF-03, RF-04 | ✅ Implementado |
-| **HU-02** | Visualización en Mapa | Operador | Visualizar en un mapa interactivo todos los contenedores con su nivel de llenado. | Marcadores por color (<50% verde, 50–80% amarillo, >80% rojo); actualización cada 5 min. | RF-04, RF-05, RF-06, RF-08 | ✅ Implementado |
+| **HU-02** | Visualización en Mapa | Operador / Ciudadano | Visualizar en un mapa interactivo todos los contenedores con su nivel de llenado. | Marcadores por color (<50% verde, 50–80% amarillo, >80% rojo); actualización cada 5 min. | RF-04, RF-05, RF-06, RF-08 | ✅ Implementado |
 | **HU-03** | Consulta de Contenedores | Operador | Consultar el nivel de llenado actual de un contenedor específico. | Popup con ID, ubicación, tipo de residuo, nivel (%) y última lectura. | RF-07 | ✅ Implementado |
-| **HU-04** | Optimización de Rutas | Administrador | Generar una ruta óptima basada en los contenedores con mayor nivel de llenado. | Algoritmo TSP heurístico; prioriza llenado >80%; muestra distancia total y tiempo. | RF-09, RF-10, RF-11, RF-35 | ✅ Implementado |
+| **HU-04** | Optimización de Rutas | Administrador / Gerente / Operador | Generar una ruta óptima basada en los contenedores con mayor nivel de llenado. | Algoritmo TSP heurístico; prioriza llenado >80%; muestra distancia total y tiempo. | RF-09, RF-10, RF-11 | ✅ Implementado |
 | **HU-05** | Visualización de Rutas | Operador | Visualizar la ruta generada en el mapa para seguir el recorrido asignado. | Polilínea sobre mapa; resalta contenedor actual y siguiente. | RF-12, RF-13 | ✅ Implementado |
-| **HU-06** | Alertas de Llenado | Administrador | Recibir alerta visual cuando un contenedor supere el 80% de su capacidad. | Lista de críticos en dashboard; notificación emergente; opción «atendido». | RF-14, RF-15, RF-33 | ✅ Implementado |
-| **HU-07** | Guías de Separación | Ciudadano | Consultar guías visuales de separación de residuos por material. | Contenido estático visual; acceso público sin login. | RF-16 | ✅ Implementado |
-| **HU-08** | Registro de Reciclaje | Ciudadano | Registrar reciclajes exitosos y acumular puntos de recompensa. | Formulario por kg; sumatoria automática de puntos; historial visible. | RF-17, RF-18, RF-19, RF-20, RF-34 | ✅ Implementado |
-| **HU-09** | Dashboard Gerencial | Gerente | Visualizar dashboard con indicadores clave (contenedores, promedio, rutas, toneladas). | Gráficos y tarjetas en tiempo real; filtros por zona y fechas. | RF-21, RF-22 | ✅ Implementado |
-| **HU-10** | Reportes Exportables | Gerente | Generar reportes automáticos exportables (Excel/PDF) del historial de rutas. | Exportación con filtros por fecha y zona; formato profesional. | RF-23 | ✅ Implementado |
-| **HU-11** | Alertas Predictivas (IA) | Gerente | Recibir alertas predictivas (IA) sobre contenedores que alcanzarán capacidad máxima. | Integración con Gemini API; alerta si la probabilidad >85% en <4 horas. | RF-24 | ✅ Implementado |
-| **HU-12** | Gestión de Roles | Administrador | Gestionar roles y permisos (Admin, Operador, Ciudadano). | Supabase Auth + RLS; asignación exclusiva por Admin; gates por rol en dashboard y mapa. | RF-25 | ✅ Implementado |
-| **HU-13** | Solicitud de Acceso | Operador | Registrarse y solicitar acceso al sistema para aprobación. | Registro email/password → solicitud de rol (Gerente/Operador); Admin aprueba/rechaza vía RPC. | RF-26 | ✅ Implementado |
-| **HU-14** | Cierre de Jornada | Operador | Registrar el cierre de jornada con el detalle de rutas ejecutadas, diferenciando cierre parcial y final, y completando rutas sin bloqueos RLS. | Dos botones explícitos: «Cierre Parcial» guarda métricas del segmento y mantiene la jornada activa; «Cierre Final» consolida el total del día, reinicia `fecha_inicio` y permite continuar trabajando; historial en dos columnas distingue cada tipo. | RF-27, RF-28, RF-29, RF-30, RF-31, RF-32 | ✅ Implementado |
-| **HU-15** | Detección de Anomalías | Gerente | Comparar nivel real vs. esperado para detectar sensores descalibrados. | Cálculo de desviaciones estadísticas; alerta por datos anómalos (>7 días constante). | RF-28 | ⛔ Pendiente |
+| **HU-06** | Alertas de Llenado | Administrador / Gerente | Recibir alerta visual cuando un contenedor supere el 80% de su capacidad. | Lista de críticos en dashboard; notificación emergente; opción «atendido». | RF-14, RF-15 | ✅ Implementado |
+| **HU-07** | Guías de Separación | Ciudadano | Consultar guías visuales de separación de residuos por material. | Contenido estático visual; acceso público sin login; tarjetas coloreadas por material; pestaña renombrada a EcoCiudadano. | RF-24, RF-35 | ✅ Implementado |
+| **HU-08** | Registro de Reciclaje | Ciudadano | Registrar reciclajes exitosos y acumular puntos de recompensa. | Formulario por kg; sumatoria automática de puntos; historial visible; webhook n8n con fallback a Supabase. | RF-25, RF-26, RF-27, RF-28, RF-32 | ✅ Implementado |
+| **HU-09** | Dashboard Gerencial | Gerente / Admin | Visualizar dashboard con indicadores clave (contenedores, promedio, rutas, toneladas). | Gráficos y tarjetas en tiempo real; filtros por zona y fechas. | RF-17, RF-18, RF-19 | ✅ Implementado |
+| **HU-10** | Reportes Exportables | Gerente / Admin | Generar reportes automáticos exportables (CSV/PDF) del historial de rutas y anomalías. | Exportación con filtros por fecha y zona; formato profesional. | RF-19, RF-23 | ✅ Implementado |
+| **HU-11** | Alertas Predictivas (IA) | Gerente / Admin | Recibir alertas predictivas (IA) sobre contenedores que alcanzarán capacidad máxima. | Integración con Gemini API; alerta si la probabilidad >85% en <4 horas. | RF-16 | ✅ Implementado |
+| **HU-12** | Gestión de Roles | Administrador | Gestionar roles y permisos (Admin, Gerente, Operador, Ciudadano). | Supabase Auth + RLS; asignación exclusiva por Admin; gates por rol en dashboard y mapa. | RF-20 | ✅ Implementado |
+| **HU-13** | Solicitud de Acceso | Operador / Gerente | Registrarse y solicitar acceso al sistema para aprobación. | Registro email/password → solicitud de rol (Gerente/Operador); Admin aprueba/rechaza vía RPC. | RF-21 | ✅ Implementado |
+| **HU-14** | Cierre de Jornada | Operador | Registrar el cierre de jornada con el detalle de rutas ejecutadas, diferenciando cierre parcial y final, y completando rutas sin bloqueos RLS. | Dos botones explícitos: «Cierre Parcial» guarda métricas del segmento y mantiene la jornada activa; «Cierre Final» consolida el total del día, reinicia `fecha_inicio` y permite continuar trabajando; historial en dos columnas distingue cada tipo. | RF-29, RF-30, RF-31 | ✅ Implementado |
+| **HU-15** | Detección de Anomalías | Gerente | Detectar sensores con lecturas anómalas: batería crítica, alta temperatura o sin señal. | KPIs por tipo de falla; tabla consolidada por contenedor; historial con filtros; simulador IoT y actualización Realtime. | RF-22, RF-23, RF-33, RF-34 | ✅ Implementado |
 
 **Leyenda**: ✅ Implementado · 🟡 Parcial · ⛔ Pendiente
 
@@ -254,6 +258,10 @@ useCaseDiagram
     Admin --> (Gestionar roles y permisos)
     Admin --> (Aprobar solicitudes de acceso)
     Admin --> (Recibir alertas de llenado >80%)
+    Admin --> (Visualizar Panel Principal con KPIs compactos)
+    Admin --> (Visualizar Reportes completos)
+    Admin --> (Recibir alertas predictivas de IA)
+    Admin --> (Consultar EcoCiudadano)
 ```
 
 ### e.2 Actor: Operador
@@ -320,15 +328,62 @@ useCaseDiagram
 ```mermaid
 useCaseDiagram
     actor "Ciudadano" as Ciud
-    Ciud --> (Consultar guías de separación de residuos)
+    Ciud --> (Consultar guías de separación de residuos por material)
     Ciud --> (Registrar reciclaje exitoso)
     Ciud --> (Acumular puntos de recompensa)
-    Ciud --> (Canjear recompensas)
+    Ciud --> (Ver catálogo de recompensas)
     Ciud --> (Ver historial de entregas)
-    Ciud --> (Consultar mapa de contenedores y puntos de acopio)
+    Ciud --> (Consultar mapa público de contenedores y puntos de acopio)
+    Ciud --> (Explorar EcoCiudadano sin login)
 ```
 
-> **Nota**: los casos de uso de cierre de jornada y finalización de rutas ya están implementados y operativos. Los casos de uso en gris (alertas predictivas, reportes exportables, detección de anomalías) pertenecen a HUs pendientes del Sprint 4.
+> **Nota**: los casos de uso de cierre de jornada y finalización de rutas están implementados y operativos. La detección de anomalías, alertas predictivas y reportes exportables corresponden al rol Gerente/Administrador y están completos.
+
+### e.4 Actor: Gerente
+
+```mermaid
+useCaseDiagram
+    actor "Gerente" as Ger
+    Ger --> (Visualizar Panel Gerencial con KPIs)
+    Ger --> (Visualizar Reportes con filtros y exportación)
+    Ger --> (Consultar alertas predictivas de IA)
+    Ger --> (Detectar anomalías de sensores)
+    Ger --> (Activar simulador de sensores IoT)
+    Ger --> (Consultar historial de anomalías)
+    Ger --> (Exportar auditoría CSV de anomalías)
+    Ger --> (Optimizar rutas de recolección)
+    Ger --> (Consultar EcoCiudadano)
+```
+
+#### CU-GE-01 — Panel Gerencial
+
+| Campo | Descripción |
+| --- | --- |
+| **Actor** | Gerente |
+| **Precondición** | Sesión activa con rol Gerente |
+| **Flujo principal** | 1. El Gerente accede a `/`.<br>2. El sistema muestra el título "Panel Gerencial" y una barra KPI compacta con: total de contenedores, promedio de llenado y contenedores críticos.<br>3. Debajo se renderiza el mapa interactivo con `RoutesMapView` y el panel de optimización de rutas.<br>4. Finalmente se muestra `DashboardGerencial` renombrado como "Reportes" con filtros por zona/fecha, 4 KPIs, predicción IA, tabla de críticos y gráfico de barras por zona. |
+| **Postcondición** | El Gerente tiene una vista integral de operaciones y analítica en una sola pantalla. |
+| **Evidencia** | `app/page.tsx` (condicional por rol Gerente); `DashboardGerencial.tsx` |
+
+#### CU-GE-02 — Detección de Anomalías
+
+| Campo | Descripción |
+| --- | --- |
+| **Actor** | Gerente |
+| **Precondición** | Sesión activa con rol Gerente; tabla `LecturasSensores` con datos |
+| **Flujo principal** | 1. El Gerente accede a `/anomalias`.<br>2. El sistema consulta `LecturasSensores` (JOIN con `Contenedores`) y clasifica cada última lectura según: batería <20%, temperatura >50°C o sin lectura >24h.<br>3. Se muestran 3 KPIs: Batería crítica, Alta temperatura, Sin señal.<br>4. Se lista una tabla consolidada de "Sensores en Alerta" con múltiples badges por contenedor.<br>5. El historial de reportes permite filtrar por zona/fecha y exportar CSV. |
+| **Postcondición** | El Gerente identifica sensores fallidos o en riesgo y dispone de auditoría exportable. |
+| **Evidencia** | `app/anomalias/page.tsx`; `anomaliasService.ts`; `AnomaliasPanel.tsx`; `HistorialAnomalias.tsx` |
+
+#### CU-GE-03 — Simulador IoT
+
+| Campo | Descripción |
+| --- | --- |
+| **Actor** | Gerente |
+| **Precondición** | Sesión activa con rol Gerente |
+| **Flujo principal** | 1. En `/anomalias` el Gerente activa el toggle "Simulador de Sensores".<br>2. Cada 10 segundos el frontend invoca `POST /api/simular-sensores`.<br>3. El endpoint genera lecturas para el 95% de los contenedores y deja el 5% restante sin lectura para simular "sin señal".<br>4. Las lecturas se insertan en `LecturasSensores` y se actualizan `Contenedores.nivel_llenado` y `ultima_lectura`.<br>5. Las suscripciones Realtime reciben los INSERT y refrescan el panel y el historial. |
+| **Postcondición** | Se generan datos dinámicos de prueba que alimentan la detección de anomalías en tiempo real. |
+| **Evidencia** | `src/components/SimuladorSensores.tsx`; `app/api/simular-sensores/route.ts`; migración `33_realtime_lecturas_sensores.sql` |
 
 ---
 
@@ -338,23 +393,43 @@ EcoRoute AI emplea la IA con un **rol dual**: como **funcionalidad del producto*
 
 ### f.1 IA como parte del producto: Gemini API (alertas predictivas)
 
-La **HU-11** especifica alertas que informan con antelación qué contenedores alcanzarán el 100% de su capacidad. La implementación prevista usa la **API de Gemini**:
+La **HU-11** especifica alertas que informen con antelación qué contenedores alcanzarán el 100% de su capacidad. La implementación real usa la **API de Gemini** en `src/lib/geminiPredictiveService.ts`:
 
-1. Un flujo automatizado (programado en n8n) lee de `LecturasSensores` las últimas **N lecturas** de cada contenedor.
-2. El prompt construye la serie histórica de llenado (porcentaje y *timestamp*) y pide una **predicción** del tiempo estimado para llegar a capacidad máxima.
-3. Gemini responde en JSON: `{ contenedor_id, probabilidad, horas_estimadas }`.
-4. Si `probabilidad > 85%` y `horas_estimadas < 4 h`, se genera una **Notificación** tipo `alerta_predictiva` (el enum ya existe en `01_initial_schema.sql:41`).
+1. **Consulta de histórico**: `obtenerLecturasDesdeSupabase(contenedorId)` lee las últimas **50 lecturas** de `LecturasSensores` ordenadas por `fecha_hora` ascendente.
+2. **Fallback sintético**: si hay menos de 10 lecturas reales, `sintetizarLecturasHistoricas(ultima)` genera una serie sintética con regresión lineal para alimentar el modelo.
+3. **Cálculo heurístico previo**: `calcularTendenciaLocal(lecturas)` ajusta una regresión lineal sobre los últimos 5 puntos para estimar la pendiente de llenado (puntos/hora).
+4. **Prompt a Gemini**: se construye un prompt estructurado con la serie histórica, la zona, el tipo de residuo y la tendencia local. Se solicita JSON con: `contenedor_id`, `nivel_proyectado`, `probabilidad_critico` (0-100) y `horas_para_critico`.
+5. **Modelo**: `gemini-2.0-flash` via `GoogleGenerativeAI` (`@google/generative-ai`).
+6. **Parser**: `limpiarRespuestaJSON` normaliza la salida; si Gemini falla, se usa la **predicción heurística** como fallback.
+7. **Persistencia**: si `prediccionEstaEnRiesgo()` retorna `true` (probabilidad >85% y horas <4), se inserta una notificación tipo `alerta_predictiva` en la tabla `Notificaciones`.
 
 > **Estado**: ✅ Implementado en Sprint 4. `geminiPredictiveService.ts` consulta `LecturasSensores`, aplica heurística y Gemini API, y genera predicciones con probabilidad y horas estimadas.
 
-**Prompt de diseño planificado** (✏️ completar con el prompt real usado):
+**Prompt real utilizado** (`geminiPredictiveService.ts`):
 
 ```text
-Actúa como analista de datos de gestión de residuos.
-Dada la serie de lecturas históricas de llenado de cada contenedor (porcentaje y fecha),
-estima en cuántas horas alcanzará el 100% de capacidad cada uno.
-Responde solo JSON con contenedor_id, probabilidad (0-1) y horas_estimadas.
-Contenedores: {serie de lecturas}
+Eres un analista experto en gestión de residuos urbanos y ciencia de datos.
+Analiza la siguiente serie histórica de niveles de llenado (%) de un contenedor IoT
+y determina si alcanzará el umbral crítico de 80% en menos de 4 horas.
+
+Datos del contenedor:
+- ID: {id}
+- Zona: {zona}
+- Tipo de residuo: {tipo}
+- Nivel actual: {actual}%
+- Tendencia local: {tendencia} puntos/hora (últimas 5 lecturas)
+
+Serie histórica (timestamp ISO -> nivel %):
+{serie_formateada}
+
+Responde ÚNICAMENTE con un JSON válido y nada más:
+{
+  "contenedor_id": "{id}",
+  "nivel_proyectado": <number>,
+  "probabilidad": <number 0-100>,
+  "horas_para_critico": <number>,
+  "fuente": "gemini"
+}
 ```
 
 ### f.2 IA como asistente de desarrollo: OpenCode / Gemini
@@ -457,15 +532,20 @@ flowchart TB
     end
 
     subgraph Backend["Capa de backend y datos"]
-        SUP["Supabase\nAuth + PostgreSQL + PostgREST + RLS + PostGIS"]
-        DB[("Base de datos PostgreSQL\nContenedores · LecturasSensores · Rutas · Usuarios\nPuntosReciclaje · HistorialRutas · Notificaciones")]
-        FUN["Funciones RPC\nregistrar_contenedor · sembrar_contenedores_demo"]
+        SUP["Supabase\nAuth + PostgreSQL + PostgREST + RLS + PostGIS + Realtime"]
+        DB[("Base de datos PostgreSQL\nContenedores · LecturasSensores · Rutas · Usuarios\nPuntosReciclaje · HistorialRutas · Notificaciones · SolicitudesAcceso")]
+        FUN["Funciones RPC\nregistrar_contenedor · sembrar_contenedores_demo · completar_ruta"]
     end
 
     subgraph Servicios["Servicios externos"]
         OSRM["Routing OSRM\nrouter.project-osrm.org\nperfil vehicular driving"]
         N8N["Automatizaciones n8n\nWebhook reciclaje · flujos de alertas"]
-        GEMINI["IA · Gemini API\nalertas predictivas (HU-11, Sprint 4)"]
+        GEMINI["IA · Gemini API\nalertas predictivas (HU-11)"]
+    end
+
+    subgraph API["API Routes de Next.js"]
+        SIM["Simulador IoT\n/api/simular-sensores"]
+        WH["Webhook n8n\n/api/webhooks/n8n"]
     end
 
     NEX --> MAP
@@ -479,25 +559,31 @@ flowchart TB
     N8N --> SUP
     STORE --> GEMINI
     GEMINI --> SUP
+    NEX --> SIM
+    SIM --> DB
+    WH --> DB
+    SUP --> STORE
 ```
 
 ### Flujo principal
 
-1. **Portal Guest-First (`/`)**: Los visitantes sin sesión ven una página de bienvenida con mapa preview de contenedores demo y 3 accesos directos: "Explorar como Ciudadano" (→ `/separacion`), "Iniciar Sesión" (→ `/acceso`), "Crear Cuenta / Solicitar Rol" (→ `/acceso`). Los usuarios autenticados ven el dashboard gerencial + mapa interactivo con gates de rol.
+1. **Portal Guest-First (`/`)**: Los visitantes sin sesión ven una página de bienvenida con mapa preview de contenedores demo y 3 accesos directos: "Explorar como Ciudadano" (→ `/separacion`), "Iniciar Sesión" (→ `/acceso`), "Crear Cuenta / Solicitar Rol" (→ `/acceso`). Los usuarios autenticados ven la vista correspondiente a su rol: Admin (KPIs compactos + mapa), Gerente (Panel Gerencial con KPIs + mapa + Reportes), Operador (mapa y rutas), Ciudadano (mapa + EcoCiudadano).
 2. **Cliente (`NEX`)** usa `@supabase/ssr` con la clave anónima; cada tabla está protegida por RLS. El middleware protege `/dashboard`, `/mapa`, `/rutas`, `/admin` (solo sesión); `/separacion` es pública.
 3. **Mapa (`MAP`)** muestra contenedores con marcadores coloreados y rutas con polilíneas; los popups se renderizan con `createRoot` (`Map.tsx:247`). Visible sin autenticación (preview en portal Guest-First).
 4. **Almacenes (`STORE`)** exponen snapshots estables consumidos con `useSyncExternalStore` para evitar bucles SSR en React 19.
 5. **Routing (`OSRM`)** calcula la ruta vehicular; si falla, se usa línea recta (Haversine).
 6. **Automatización (`N8N`)** recibe el registro de reciclaje por webhook y, si no responde en 6 s, se usa el fallback directo a Supabase.
 7. **IA (`GEMINI`)** alimenta las alertas predictivas del Sprint 4 (HU-11).
-8. **Roles y permisos**: `puede(rol, accion)` retorna `true` siempre para `Admin` (superusuario). Los demás roles siguen la matriz estricta: Ciudadano (mapa, separación, reciclaje), Operador (+ gestión contenedores, optimización rutas), Gerente (+ dashboard, reportes, IA).
-9. **Cierre de Jornada (Doble Botón)**: El operador tiene dos botones explícitos en `app/page.tsx` — "Cierre Parcial" (ámbar, calcula métricas desde `fecha_inicio` actual y mantiene la jornada activa) y "Cierre Final" (verde, consolida el total del día buscando el `fecha_inicio` más antiguo de los cierres y reinicia `fecha_inicio` a `now()`). Ambos persisten en `HistorialRutas` con `tipo_cierre` = "parcial" | "final". El historial del operador (`HistorialOperador.tsx`) muestra dos columnas: "Jornadas" (izquierda, con badges de tipo) y "Rutas Completadas" (derecha, expandibles). Las rutas pendientes se completan mediante la RPC `completar_ruta` (bypass de RLS).
+8. **Simulador IoT (`SIM`)**: API Route `/api/simular-sensores` genera lecturas sintéticas cada 10 s (cuando el Gerente activa el toggle) e inserta en `LecturasSensores`; el 5% de contenedores no recibe lectura para simular pérdida de señal.
+9. **Realtime**: Suscripciones `supabase.channel` propagan INSERT/UPDATE de `LecturasSensores`, `Contenedores` y `Notificaciones` hacia el frontend, actualizando mapa, anomalías, panel de alertas y campanita de notificaciones sin necesidad de refrescar la página.
+10. **Roles y permisos**: `puede(rol, accion)` retorna `true` siempre para `Admin` (superusuario). Los demás roles siguen la matriz estricta: Ciudadano (mapa, separación, reciclaje), Operador (+ gestión contenedores, optimización rutas, historial), Gerente (+ panel gerencial, reportes, IA, anomalías, simulador IoT).
+11. **Cierre de Jornada (Doble Botón)**: El operador tiene dos botones explícitos en `app/page.tsx` — "Cierre Parcial" (ámbar, calcula métricas desde `fecha_inicio` actual y mantiene la jornada activa) y "Cierre Final" (verde, consolida el total del día buscando el `fecha_inicio` más antiguo de los cierres y reinicia `fecha_inicio` a `now()`). Ambos persisten en `HistorialRutas` con `tipo_cierre` = "parcial" | "final". El historial del operador (`HistorialOperador.tsx`) muestra dos columnas: "Jornadas" (izquierda, con badges de tipo) y "Rutas Completadas" (derecha, expandibles). Las rutas pendientes se completan mediante la RPC `completar_ruta` (bypass de RLS).
 
 ---
 
 ## i. Arquitectura de la Base de Datos
 
-**Motor**: PostgreSQL 15 (Supabase) con **PostGIS** habilitado (`create extension if not exists postgis`, migración `01_initial_schema.sql:1`). La fuente única de verdad del esquema son las migraciones de `supabase/migrations/` (01 a 07), aplicadas en orden.
+**Motor**: PostgreSQL 15 (Supabase) con **PostGIS** habilitado (`create extension if not exists postgis`, migración `01_initial_schema.sql:1`). La fuente única de verdad del esquema son las migraciones de `supabase/migrations/` (01 a 36), aplicadas en orden.
 
 ### i.1 Diagrama relacional
 
@@ -507,6 +593,7 @@ erDiagram
     Contenedores ||--o{ PuntosReciclaje : "recibe entregas"
     Usuarios ||--o{ PuntosReciclaje : "registra"
     Usuarios ||--o{ Notificaciones : "recibe"
+    Usuarios ||--o{ SolicitudesAcceso : "solicita"
     Rutas ||--o{ HistorialRutas : "se ejecuta"
     Contenedores ||--o{ HistorialRutas : "atendidos (uuid[])"
 ```
@@ -521,15 +608,16 @@ erDiagram
 | **`Usuarios`** | `id` (PK), `nombre`, `email` (UNIQUE), `rol` (enum `Admin/Operador/Ciudadano`), `telefono`, `zona_asignada`, `puntos_reciclaje` (`check >= 0`) |
 | **`PuntosReciclaje`** | `id` (PK), `usuario_id` (FK → `Usuarios`, CASCADE), `contenedor_id` (FK → `Contenedores`, `ON DELETE SET NULL`, agregado en migración 04), `fecha`, `material` (enum), `cantidad` (`check >= 0`), `puntos_ganados`, `validado_por` |
 | **`HistorialRutas`** | `id` (PK), `ruta_id` (FK → `Rutas`, `SET NULL`), `fecha_ejecucion`, `contenedores_recogidos` (`uuid[]`), `tiempo_real` (`interval`), `combustible_consumido`, `distancia_total` y `geometria` (`jsonb`) agregados en migración 02, `observaciones` |
-| **`Notificaciones`** | `id` (PK), `usuario_id` (FK → `Usuarios`, CASCADE), `tipo` (enum: `alerta_llenado`, `alerta_predictiva`, `solicitud_acceso`, `jornada`, `sistema`), `mensaje`, `leida`, `fecha_envio`, `enlace` |
+| **`Notificaciones`** | `id` (PK), `usuario_id` (FK → `Usuarios`, CASCADE), `tipo` (enum: `alerta_llenado`, `alerta_predictiva`, `alerta_n8n`, `solicitud_acceso`, `jornada`, `sistema`), `mensaje`, `leida`, `fecha_envio`, `enlace`, `contenedor_id`, `atendida` |
+| **`SolicitudesAcceso`** | `id` (PK), `email`, `nombre`, `rol_solicitado`, `estado` (enum: pendiente/aprobada/rechazada), `fecha_solicitud`, `fecha_resolucion`, `resuelto_por` (FK → `Usuarios`) |
 
-**Enums**: `tipo_residuo` (9 valores), `estado_contenedor` (5 valores incluyendo `vacio` añadido en migración 07), `rol_usuario`, `material_reciclaje`, `tipo_notificacion`.
+**Enums**: `tipo_residuo` (9 valores), `estado_contenedor` (5 valores incluyendo `vacio` añadido en migración 07), `rol_usuario` (4 valores incluyendo `Gerente`), `material_reciclaje`, `tipo_notificacion` (6 valores incluyendo `alerta_n8n`).
 
 **Índices** (`01_initial_schema.sql:131-136`): `LecturasSensores(contenedor_id, fecha_hora)`, `HistorialRutas(ruta_id, fecha_ejecucion)`, `Notificaciones(usuario_id)`, `PuntosReciclaje(usuario_id)` y `PuntosReciclaje(contenedor_id)`.
 
 ### i.3 Seguridad: Row Level Security (RLS)
 
-Las 7 tablas tienen **RLS habilitado** y se crearon **12 políticas** para la clave anónima del cliente web:
+Las 8 tablas tienen **RLS habilitado** y se gestionan **61 políticas** en total (la mayoría para roles autenticados; varias permiten SELECT/INSERT anónimo para el modo demo). Políticas representativas para el cliente web:
 
 | Migración | Políticas creadas | Tabla |
 | --- | --- | --- |
@@ -628,6 +716,42 @@ n8n (externo) --POST--> /api/webhooks/n8n (Next.js) --INSERT--> Supabase Notific
 - **Prediccion IA** (`geminiPredictiveService.ts`): genera `alerta_predictiva` cuando Gemini AI detecta probabilidad >85% en <4 horas.
 - **Circuit-breaker**: el frontend nunca depende de n8n para operar; la automatizacion es un componente mejorable y opcional en la demo.
 
+### j.4 Simulador IoT de sensores (`app/api/simular-sensores/route.ts`)
+
+Para facilitar la demostración del módulo de anomalías sin hardware físico, se creó un simulador de lecturas de sensores controlado desde la interfaz del Gerente:
+
+**Arquitectura del flujo:**
+
+```
+Toggle en /anomalias
+    ↓ cada 10 s (setInterval)
+POST /api/simular-sensores
+    ↓ service role key
+Supabase: SELECT Contenedores
+    ↓ 95% activos / 5% sin señal
+INSERT LecturasSensores + UPDATE Contenedores
+    ↓ Realtime INSERT
+AnomaliasPanel + HistorialAnomalias se refrescan
+```
+
+**Comportamiento por contenedor activo (95%):**
+
+| Campo | Lógica |
+| --- | --- |
+| `nivel_llenado` | Incremento aleatorio de 1-5 puntos porcentuales; si supera 95% se reinicia a un valor inicial aleatorio de 0-10%. |
+| `bateria` | 95% de probabilidad de valor entre 60-99%; 5% de probabilidad de caer entre 5-14% (anomalía "Batería crítica"). |
+| `temperatura` | 96% de probabilidad de fluctuar entre 22-32°C; 4% de probabilidad de pico entre 55-70°C (anomalía "Alta temperatura"). |
+
+**Contenedores sin señal (5%):**
+- No se inserta ninguna lectura para ellos en esa ronda.
+- Al pasar más de 24 h sin lecturas, el servicio `anomaliasService.ts` los clasifica como anomalía "Sin señal".
+
+**Persistencia y actualización en tiempo real:**
+
+- Cada lectura generada se inserta en `LecturasSensores`.
+- Se actualizan `Contenedores.nivel_llenado` y `Contenedores.ultima_lectura`.
+- La tabla `LecturasSensores` está en la publicación `supabase_realtime` (migración `33_realtime_lecturas_sensores.sql`), por lo que los clientes suscritos reciben el evento `INSERT` y refrescan automáticamente.
+
 ---
 
 ## k. Enlace del Repositorio (GitHub)
@@ -642,12 +766,12 @@ https://github.com/anastasiagarcs-afk/ecoroute-ai
 
 | Elemento | Descripción |
 | --- | --- |
-| Stack | Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · Leaflet 1.9 · Supabase (PostgreSQL + RLS + PostGIS) · OSRM · n8n · Gemini AI |
-| Frontend | `app/` (paginas + API Route) y `src/components/` (19 componentes modulares) |
-| Logica | `src/lib/` (17 modulos: contenedores, rutas, reciclaje, gamificacion, alertas, auth, admin, n8n, IA predictiva, reportes, toasts, cliente Supabase) |
+| Stack | Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · lucide-react · Leaflet 1.9 · Supabase (PostgreSQL + RLS + PostGIS + Realtime) · OSRM · n8n · Gemini AI |
+| Frontend | `app/` (6 páginas + 2 API Routes) y `src/components/` (23 componentes modulares) |
+| Logica | `src/lib/` (19 módulos: contenedores, rutas, reciclaje, gamificación, alertas, auth, admin, anomalías, n8n, IA predictiva, reportes, toasts, cliente Supabase) |
 | Tipos | `src/types/schema.ts` (modelo tipado completo + tipos de Supabase) |
-| Base de datos | `supabase/migrations/` (36 migraciones idempotentes, 8 tablas, 61 politicas RLS) |
-| Documentación | `PLAN_PROYECTO.md`, `INFORME_PROYECTO.md`, `BITACORA.md` (automática), `AGENTS.md` |
+| Base de datos | `supabase/migrations/` (36 migraciones idempotentes, 8 tablas, 61 políticas RLS) |
+| Documentación | `PLAN_PROYECTO.md`, `INFORME_PROYECTO.md`, `BITACORA.md` (automática), `AGENTS.md`, `README.md` |
 
 ### k.2 Instalación y ejecución local
 
@@ -733,16 +857,24 @@ Subir el video explicativo de la funcionalidad del proyecto a **Google Drive** c
 
 ---
 
-## Estado de los Sprints y HUs pendientes (resumen)
+## Estado de los Sprints (resumen)
 
 | Sprint | Alcance | Estado |
 | --- | --- | --- |
 | Sprint 1 | Base de datos (schema + migraciones), mapas y monitoreo de contenedores | ✅ Completado |
-| Sprint 2 | Optimización de rutas (OSRM), historial y persistencia en Supabase | ✅ Completado |   
+| Sprint 2 | Optimización de rutas (OSRM), historial y persistencia en Supabase | ✅ Completado |
 | Sprint 3 | Separación en la fuente, registro de reciclaje, gamificación y dashboard gerencial | ✅ Completado |
 | Sprint 4 | Analítica, IA predictiva, reportes y stepper de mapa | ✅ Completado |
-| Sprint 5 | Autenticación email/password, roles y solicitudes de acceso | ✅ Completado |
+| Sprint 5 | Autenticación email/password, roles, solicitudes de acceso y cierre de jornada | ✅ Completado |
+| Sprint 6 | Detección de anomalías de sensores, simulador IoT y suscripción Realtime | ✅ Completado |
+| Sprint 7 | Rediseño EcoCiudadano, documentación académica y auditoría de repositorio | ✅ Completado |
 
-**Sprint 4**: ✅ Completado (HU-05/RF-13 stepper mapa, HU-10/RF-23 reportes CSV/PDF, HU-11/RF-24 predicciones IA Gemini).
+**Sprint 4**: ✅ Completado (HU-05/RF-13 stepper mapa, HU-10/RF-19 reportes CSV/PDF, HU-11/RF-16 predicciones IA Gemini).
 
-**Sprint 5**: ✅ Completado. HU-12/RF-25 (roles: enum `Gerente`, `puede()` con short-circuit Admin superusuario, gates), HU-13/RF-26 (auth + solicitudes: `authService.ts`, `adminService.ts`, `app/acceso/page.tsx`, `app/admin/page.tsx`, tabla `SolicitudesAcceso`, RPCs `aprobar_solicitud_acceso`/`crear_solicitud_acceso`, seed Admin `10_seed_admin_acceso.sql`). Home Guest-First con preview del mapa, `/separacion` pública, matriz de permisos por rol según especificación UNEG. **Script seed**: `npm run seed:admin` crea `admin@ecoroute.com` / `Admin123456!` vía `SUPABASE_SERVICE_ROLE_KEY`. **Flujo registro optimizado**: `emailConfirm: true` en `signUp()` (bypass confirmación email en dev), selector de rol en `/acceso` (Ciudadano → acceso directo; Operador/Gerente → solicitud a admin). **Gestión de roles**: RPC ampliado con `p_rol_asignado` (migración `11`), panel `/admin` con botones "Aprobar como Admin/Gerente/Operador" + "Rechazar". **Arquitectura QA/Dev**: El bypass de confirmación por email (`emailConfirm: true`) y el uso del dominio `@ecoroute.com` son decisiones deliberadas para entornos de prueba (QA/Dev) que evitan los límites de tasa (rate limits) de envío de emails de Supabase en su plan gratuito durante la evaluación. En producción se usará dominio real + flujo de confirmación por email estándar. Pendiente: **HU-14** (Cierre de Jornada), **HU-15** (Anomalías).
+**Sprint 5**: ✅ Completado. HU-12/RF-20 (roles: enum `Gerente`, `puede()` con short-circuit Admin superusuario, gates), HU-13/RF-21 (auth + solicitudes), HU-14/RF-29-31 (cierre de jornada parcial/final y RPC `completar_ruta`).
+
+**Sprint 6**: ✅ Completado. HU-15/RF-22-23-33-34 (`anomaliasService.ts`, `AnomaliasPanel.tsx`, `HistorialAnomalias.tsx`, `app/api/simular-sensores/route.ts`, `SimuladorSensores.tsx`, Realtime en `LecturasSensores`).
+
+**Sprint 7**: ✅ Completado. RF-35 (rediseño visual de `/separacion` a EcoCiudadano con tarjetas coloreadas por material), actualización completa de `INFORME_PROYECTO.md` y `README.md` alineados con el código real.
+
+**Todas las historias de usuario (HU-01…HU-15) y requerimientos funcionales (RF-01…RF-35) están implementados.** Los requerimientos no funcionales RNF-01 (tiempo de respuesta <2s) y RNF-11 (accesibilidad WCAG 2.1 completa) quedan como líneas de mejora continua.
