@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useSyncExternalStore } from "react";
+import { Archive, BarChart3, AlertTriangle, MapPin } from "lucide-react";
 import { useContenedores } from "@/hooks/useContenedores";
 import {
   obtenerSnapshotHistorial,
@@ -37,20 +38,44 @@ const ETIQUETAS_TIPO_RESIDUO: Record<string, string> = {
   mixto: "Mixto",
 };
 
+const COLORES_ESTADO: Record<string, string> = {
+  activo: "bg-emerald-500/15 text-emerald-400 ring-emerald-500/20",
+  inactivo: "bg-zinc-500/15 text-zinc-400 ring-zinc-500/20",
+  en_mantenimiento: "bg-amber-500/15 text-amber-400 ring-amber-500/20",
+  repleto: "bg-rose-500/15 text-rose-400 ring-rose-500/20",
+  vacio: "bg-cyan-500/15 text-cyan-400 ring-cyan-500/20",
+};
+
+const ETIQUETAS_ESTADO: Record<string, string> = {
+  activo: "Activo",
+  inactivo: "Inactivo",
+  en_mantenimiento: "En mantenimiento",
+  repleto: "Repleto",
+  vacio: "Vacío / Disponible",
+};
+
 function TarjetaKpi({
   etiqueta,
   valor,
   detalle,
-  colorPunto,
+  icono: Icono,
+  colorFondo,
+  colorTexto,
+  colorBorde,
 }: {
   etiqueta: string;
   valor: string | number;
   detalle?: string;
-  colorPunto: string;
+  icono: React.ComponentType<{ className?: string }>;
+  colorFondo: string;
+  colorTexto: string;
+  colorBorde: string;
 }) {
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-      <span className={`mt-1 h-3.5 w-3.5 shrink-0 rounded-full ${colorPunto}`} />
+    <div className="flex items-start gap-4 rounded-xl border border-zinc-800 bg-white p-4 shadow-sm transition-all hover:border-zinc-700 dark:border-zinc-800 dark:bg-zinc-900">
+      <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-xl ${colorBorde} ${colorFondo} ${colorTexto}`}>
+        <Icono className="h-7 w-7" />
+      </div>
       <div className="min-w-0">
         <p className="text-2xl font-bold leading-tight text-zinc-900 dark:text-zinc-50">
           {valor}
@@ -283,7 +308,7 @@ export default function DashboardGerencial() {
                 fechaHasta,
               });
             }}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-500"
           >
             Exportar CSV
           </button>
@@ -296,7 +321,7 @@ export default function DashboardGerencial() {
                 fechaHasta,
               })
             }
-            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-600 bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 dark:border-emerald-500 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-cyan-500"
           >
             Exportar PDF
           </button>
@@ -308,31 +333,44 @@ export default function DashboardGerencial() {
           etiqueta="Contenedores totales"
           valor={totalContenedores}
           detalle={zonaSeleccionada === "Todas" ? "Todas las zonas" : zonaSeleccionada}
-          colorPunto="bg-zinc-400"
+          icono={Archive}
+          colorFondo="bg-emerald-500/15"
+          colorTexto="text-emerald-400"
+          colorBorde="border border-emerald-500/20"
         />
         <TarjetaKpi
           etiqueta="Promedio de llenado"
           valor={`${promedioLlenado}%`}
           detalle="General de la selección"
-          colorPunto="bg-blue-500"
-        />        <TarjetaKpi
+          icono={BarChart3}
+          colorFondo="bg-cyan-500/15"
+          colorTexto="text-cyan-400"
+          colorBorde="border border-cyan-500/20"
+        />
+        <TarjetaKpi
           etiqueta="Contenedores críticos"
           valor={criticos.length}
           detalle="> 80% de capacidad"
-          colorPunto="bg-red-500"
+          icono={AlertTriangle}
+          colorFondo="bg-rose-500/15"
+          colorTexto="text-rose-400"
+          colorBorde="border border-rose-500/20"
         />
         <TarjetaKpi
           etiqueta="Rutas ejecutadas"
           valor={rutasFiltradas.length}
           detalle={rangoFechas}
-          colorPunto="bg-emerald-500"
+          icono={MapPin}
+          colorFondo="bg-emerald-500/15"
+          colorTexto="text-emerald-400"
+          colorBorde="border border-emerald-500/20"
         />
       </div>
 
-      <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="rounded-xl border border-emerald-500/30 bg-gradient-to-r from-zinc-900 via-emerald-950/20 to-zinc-900 p-4 shadow-sm">
         <div className="mb-3 flex items-center justify-between gap-2">
           <div>
-            <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+            <h3 className="text-sm font-semibold text-zinc-50">
               Predicción de IA (HU-11)
             </h3>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -344,7 +382,7 @@ export default function DashboardGerencial() {
               type="button"
               onClick={ejecutarPrediccionIA}
               disabled={analizandoPrediccion}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-emerald-600"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-cyan-500 px-3 py-1.5 text-sm font-bold text-slate-950 shadow-lg shadow-emerald-500/20 transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {analizandoPrediccion ? "Analizando…" : "Analizar con IA"}
             </button>
@@ -472,8 +510,10 @@ export default function DashboardGerencial() {
                         {contenedor.nivel_llenado}%
                       </span>
                     </td>
-                    <td className="py-2 text-zinc-600 dark:text-zinc-300">
-                      {contenedor.estado}
+                    <td className="py-2">
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${COLORES_ESTADO[contenedor.estado] ?? "bg-zinc-500/15 text-zinc-400 ring-zinc-500/20"}`}>
+                        {ETIQUETAS_ESTADO[contenedor.estado]}
+                      </span>
                     </td>
                   </tr>
                 ))}
