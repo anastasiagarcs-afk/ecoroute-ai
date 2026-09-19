@@ -1,5 +1,5 @@
 # Bitácora del Proyecto — EcoRoute AI
-> Documento generado automáticamente el 19 de septiembre de 2026 a las 06:31 p. m. por `npm run informe`. No editar a mano: se regenera desde el código para mantenerse al día.
+> Documento generado automáticamente el 19 de septiembre de 2026 a las 07:22 p. m. por `npm run informe`. No editar a mano: se regenera desde el código para mantenerse al día.
 > **Nota**: Este archivo es el registro cronológico automático. Para el informe académico formal, ver `INFORME_PROYECTO.md`.
 
 ## 1. Arquitectura y Stack Tecnológico
@@ -27,14 +27,16 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 
 | Archivo | Export principal | Líneas | Descripción |
 | --- | --- | --- | --- |
+| `src/components/AnomaliasPanel.tsx` | AnomaliasPanel | 208 | — |
 | `src/components/CierreJornadaModal.tsx` | CierreJornadaModal | 263 | — |
 | `src/components/ConfirmarEliminarContenedorModal.tsx` | ConfirmarEliminarContenedorModal | 91 | Diálogo de confirmación para eliminar un contenedor en Supabase y quitar su marcador del mapa. |
 | `src/components/DashboardGerencial.tsx` | DashboardGerencial | 594 | Dashboard gerencial: KPIs (totales, promedio de llenado, críticos >80%, rutas ejecutadas), filtros por zona y rango de fechas, gráfico de barras de estado por zona y tabla de contenedores críticos con acción Atender/Vaciar. |
 | `src/components/EditarContenedorModal.tsx` | EditarContenedorModal | 268 | Modal para editar un contenedor existente: ajusta el porcentaje de llenado, el tipo de residuo y el estado (activo, vacío, mantenimiento, etc.), actualiza Supabase y refresca el marcador en el mapa. |
 | `src/components/GamificacionPanel.tsx` | GamificacionPanel | 179 | Panel de gamificación: puntos acumulados, nivel del ciudadano, barra de progreso y catálogo de recompensas. |
+| `src/components/HistorialAnomalias.tsx` | HistorialAnomalias | 253 | — |
 | `src/components/HistorialOperador.tsx` | HistorialOperador | 309 | — |
 | `src/components/Map.tsx` | MapaContenedores | 442 | Mapa Leaflet interactivo: contenedores en tiempo real y polilínea de la ruta activa. |
-| `src/components/NavRol.tsx` | NavRol | 571 | — |
+| `src/components/NavRol.tsx` | NavRol | 572 | — |
 | `src/components/NotificacionesOperador.tsx` | NotificacionesOperador | 132 | — |
 | `src/components/NuevoContenedorModal.tsx` | NuevoContenedorModal | 593 | Modal para registrar nuevos contenedores (código, tipo de residuo, nivel, capacidad y coordenadas); inserta vía la función Supabase registrar_contenedor y el marcador aparece al instante en el mapa. |
 | `src/components/PanelAlertas.tsx` | PanelAlertas | 349 | — |
@@ -46,12 +48,14 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 | `src/components/RutaPersonalizadaModal.tsx` | RutaPersonalizadaModal | 232 | — |
 | `src/components/SeparacionGuia.tsx` | SeparacionGuia | 223 | Guía interactiva de separación en la fuente: tarjetas por tipo de residuo con qué depositar y qué evitar. |
 | `src/components/SeparacionModulo.tsx` | SeparacionModulo | 155 | Contenedor del módulo de Separación y Gamificación con navegación por pestañas. |
+| `src/components/SimuladorSensores.tsx` | SimuladorSensores | 80 | — |
 | `src/components/ToastHost.tsx` | ToastHost | 121 | Host global de notificaciones (toasts) usando useSyncExternalStore; posicionado sobre el mapa con animación de entrada y colores por tipo (éxito, error, info). |
 
 ## 4. Rutas de la aplicación
 
 - `/acceso` → `app/acceso/page.tsx`
 - `/admin` → `app/admin/page.tsx`
+- `/anomalias` → `app/anomalias/page.tsx`
 - `/` → `app/page.tsx`
 - `/reportes` → `app/reportes/page.tsx`
 - `/separacion` → `app/separacion/page.tsx`
@@ -62,6 +66,7 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 | --- | --- | --- |
 | `src/lib/adminService.ts` | 134 | — |
 | `src/lib/alertasService.ts` | 223 | — |
+| `src/lib/anomaliasService.ts` | 131 | — |
 | `src/lib/authService.ts` | 251 | — |
 | `src/lib/contenedoresStore.ts` | 787 | Almacén de contenedores: carga y semilla desde Supabase, normalización de ubicación (objeto, GeoJSON, EWKT o WKB/EWKB hexadecimal con parseFloat), datos de respaldo en localStorage y registro, vaciado (0% y estado vacio), edición y eliminación en tiempo real. |
 | `src/lib/gamificacion.ts` | 190 | Lógica pura de gamificación: puntos por kg según material, niveles de ciudadano, progreso y catálogo de recompensas. |
@@ -72,7 +77,7 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 | `src/lib/operadoresService.ts` | 393 | — |
 | `src/lib/reciclajeService.ts` | 279 | Servicio Supabase del módulo de reciclaje: usuario ciudadano actual, registro de entregas con webhook n8n (insert PuntosReciclaje + update Usuarios) y entregas recientes. |
 | `src/lib/reporteExportador.ts` | 237 | — |
-| `src/lib/rolesAutorizados.ts` | 74 | — |
+| `src/lib/rolesAutorizados.ts` | 76 | — |
 | `src/lib/routeOptimizer.ts` | 258 | Optimización de rutas con OSRM (perfiles vehiculares y pesos) y cálculo de ruta por distancia, con fallback a línea recta. |
 | `src/lib/supabaseClient.ts` | 69 | Cliente Supabase del navegador: sanitización de variables de entorno, validación de configuración y detección del modo de respaldo. |
 | `src/lib/supabaseServer.ts` | 29 | — |
@@ -115,6 +120,7 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 - `supabase/migrations/31_habilitar_realtime_completo.sql`
 - `supabase/migrations/32_fix_trigger_duplicados.sql`
 - `supabase/migrations/33_fix_rls_gerente_notificaciones.sql`
+- `supabase/migrations/33_realtime_lecturas_sensores.sql`
 - `supabase/migrations/34_update_notificaciones_estado.sql`
 - `supabase/migrations/35_add_contenedor_id_to_notificaciones.sql`
 - `supabase/migrations/36_add_alerta_n8n_type.sql`

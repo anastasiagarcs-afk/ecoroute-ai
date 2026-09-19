@@ -25,6 +25,7 @@ const LINKS_POR_ROL: Record<RolUsuario, NavLink[]> = {
   ],
   Gerente: [
     { href: "/", etiqueta: "Principal", accion: "ver_dashboard" },
+    { href: "/anomalias", etiqueta: "Anomalias", accion: "ver_anomalias" },
     { href: "/separacion", etiqueta: "EcoCiudadano", accion: "separacion_residuos" },
   ],
   Operador: [

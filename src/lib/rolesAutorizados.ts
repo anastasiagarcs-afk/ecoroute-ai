@@ -15,7 +15,8 @@ export type AccionSistema =
   | "aprobar_solicitudes"
   | "separacion_residuos"
   | "reciclar"
-  | "ver_historial";
+  | "ver_historial"
+  | "ver_anomalias";
 
 const PERMISOS: Record<RolUsuario, AccionSistema[]> = {
   Admin: [
@@ -45,6 +46,7 @@ const PERMISOS: Record<RolUsuario, AccionSistema[]> = {
     "usar_ia_predictiva",
     "ver_historial",
     "separacion_residuos",
+    "ver_anomalias",
   ],
   Operador: [
     "ver_mapa",
