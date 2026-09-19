@@ -1,5 +1,5 @@
 # Bitácora del Proyecto — EcoRoute AI
-> Documento generado automáticamente el 19 de septiembre de 2026 a las 06:10 p. m. por `npm run informe`. No editar a mano: se regenera desde el código para mantenerse al día.
+> Documento generado automáticamente el 19 de septiembre de 2026 a las 06:31 p. m. por `npm run informe`. No editar a mano: se regenera desde el código para mantenerse al día.
 > **Nota**: Este archivo es el registro cronológico automático. Para el informe académico formal, ver `INFORME_PROYECTO.md`.
 
 ## 1. Arquitectura y Stack Tecnológico
@@ -44,8 +44,8 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 | `src/components/RoutePanel.tsx` | RoutePanel | 963 | Panel de optimización de rutas: selector de contenedores, generación de ruta vía OSRM, persistencia en el historial, gestión de contenedores (vaciar, editar, eliminar) y reinicio a línea recta. |
 | `src/components/RoutesMapView.tsx` | RoutesMapView | 135 | Vista integrada de mapa + panel de rutas. Coordina la ruta generada y la ruta histórica inspeccionada sobre Leaflet. |
 | `src/components/RutaPersonalizadaModal.tsx` | RutaPersonalizadaModal | 232 | — |
-| `src/components/SeparacionGuia.tsx` | SeparacionGuia | 216 | Guía interactiva de separación en la fuente: tarjetas por tipo de residuo con qué depositar y qué evitar. |
-| `src/components/SeparacionModulo.tsx` | SeparacionModulo | 159 | Contenedor del módulo de Separación y Gamificación con navegación por pestañas. |
+| `src/components/SeparacionGuia.tsx` | SeparacionGuia | 223 | Guía interactiva de separación en la fuente: tarjetas por tipo de residuo con qué depositar y qué evitar. |
+| `src/components/SeparacionModulo.tsx` | SeparacionModulo | 155 | Contenedor del módulo de Separación y Gamificación con navegación por pestañas. |
 | `src/components/ToastHost.tsx` | ToastHost | 121 | Host global de notificaciones (toasts) usando useSyncExternalStore; posicionado sobre el mapa con animación de entrada y colores por tipo (éxito, error, info). |
 
 ## 4. Rutas de la aplicación

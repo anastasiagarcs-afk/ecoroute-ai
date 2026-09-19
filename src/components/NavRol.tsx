@@ -21,19 +21,19 @@ const LINKS_POR_ROL: Record<RolUsuario, NavLink[]> = {
     { href: "/", etiqueta: "Principal", accion: "ver_dashboard" },
     { href: "/reportes", etiqueta: "Reportes", accion: "ver_reportes" },
     { href: "/admin", etiqueta: "Solicitudes", accion: "aprobar_solicitudes" },
-    { href: "/separacion", etiqueta: "Separacion", accion: "separacion_residuos" },
+    { href: "/separacion", etiqueta: "EcoCiudadano", accion: "separacion_residuos" },
   ],
   Gerente: [
     { href: "/", etiqueta: "Principal", accion: "ver_dashboard" },
-    { href: "/separacion", etiqueta: "Separacion", accion: "separacion_residuos" },
+    { href: "/separacion", etiqueta: "EcoCiudadano", accion: "separacion_residuos" },
   ],
   Operador: [
     { href: "/", etiqueta: "Mapa y Rutas", accion: "ver_mapa" },
-    { href: "/separacion", etiqueta: "Separacion", accion: "separacion_residuos" },
+    { href: "/separacion", etiqueta: "EcoCiudadano", accion: "separacion_residuos" },
   ],
   Ciudadano: [
     { href: "/", etiqueta: "Mapa", accion: "ver_mapa" },
-    { href: "/separacion", etiqueta: "Separacion", accion: "separacion_residuos" },
+    { href: "/separacion", etiqueta: "EcoCiudadano", accion: "separacion_residuos" },
   ],
 };
 

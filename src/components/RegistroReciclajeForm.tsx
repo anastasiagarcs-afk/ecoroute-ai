@@ -203,7 +203,7 @@ export default function RegistroReciclajeForm({
           <span className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
             Puntos por esta entrega
           </span>
-          <span className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
+          <span className="text-emerald-400 font-bold text-xl">
             {puntosEstimados !== null ? puntosEstimados : "—"}
           </span>
         </div>

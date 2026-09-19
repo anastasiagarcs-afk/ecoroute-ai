@@ -93,20 +93,16 @@ export default function SeparacionModulo() {
               href="/"
               className="text-xs font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300"
             >
-              ← Volver al mapa de monitoreo
+              ← Volver al Portal
             </Link>
             <h1 className="mt-1 text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-              Separación en la Fuente y Gamificación
+              EcoCiudadano: Guía de Separación & Recompensas
             </h1>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Aprende a separar tus residuos, registra tus entregas y acumula
-              puntos por cada kilogramo reciclado.
+              Aprende a separar correctamente, registra tus entregas y canjea
+              recompensas por cada kilogramo de residuos reciclados.
             </p>
           </div>
-          <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-400">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            Sprint 3 — Separación y gamificación
-          </span>
         </div>
 
         <nav

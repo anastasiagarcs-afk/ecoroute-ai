@@ -104,7 +104,7 @@ export default function GamificacionPanel({
             return (
               <article
                 key={recompensa.id}
-                className={`flex flex-col rounded-2xl border p-4 shadow-sm dark:bg-zinc-900 ${
+                className={`flex flex-col rounded-2xl border p-4 shadow-sm transition-all hover:border-emerald-500/40 dark:bg-zinc-900 ${
                   disponible
                     ? "border-emerald-300 bg-white dark:border-emerald-500/30"
                     : "border-zinc-200 bg-white/60 dark:border-zinc-800 dark:bg-zinc-900/60"

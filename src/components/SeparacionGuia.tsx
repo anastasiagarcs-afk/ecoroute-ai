@@ -7,7 +7,8 @@ export interface CategoriaGuiaSeparacion {
   descripcion: string;
   depositar: string[];
   evitar: string[];
-  claseBadge: string;
+  claseBorde: string;
+  claseDot: string;
 }
 
 export const GUIA_SEPARACION: CategoriaGuiaSeparacion[] = [
@@ -31,7 +32,8 @@ export const GUIA_SEPARACION: CategoriaGuiaSeparacion[] = [
       "Aceite vegetal en grandes cantidades",
       "Restos de animales en mal estado",
     ],
-    claseBadge: "bg-emerald-600 dark:bg-emerald-500",
+    claseBorde: "border-amber-700/40 bg-amber-950/20",
+    claseDot: "bg-amber-500",
   },
   {
     material: "plastico",
@@ -53,7 +55,8 @@ export const GUIA_SEPARACION: CategoriaGuiaSeparacion[] = [
       "Juguetes rotos y artículos compuestos",
       "Poliestireno (unicel) sucio",
     ],
-    claseBadge: "bg-blue-600 dark:bg-blue-500",
+    claseBorde: "border-blue-500/40 bg-blue-950/20",
+    claseDot: "bg-blue-500",
   },
   {
     material: "vidrio",
@@ -74,7 +77,8 @@ export const GUIA_SEPARACION: CategoriaGuiaSeparacion[] = [
       "Tubos fluorescentes y bombillas",
       "Vasos y copas de vidrio templado",
     ],
-    claseBadge: "bg-teal-600 dark:bg-teal-500",
+    claseBorde: "border-emerald-500/40 bg-emerald-950/20",
+    claseDot: "bg-emerald-500",
   },
   {
     material: "papel_carton",
@@ -96,7 +100,8 @@ export const GUIA_SEPARACION: CategoriaGuiaSeparacion[] = [
       "Recibos y tickets de papel térmico",
       "Cartones de bebidas tipo tetrabrik",
     ],
-    claseBadge: "bg-amber-500 dark:bg-amber-400",
+    claseBorde: "border-yellow-500/40 bg-yellow-950/20",
+    claseDot: "bg-yellow-500",
   },
   {
     material: "metal",
@@ -118,7 +123,8 @@ export const GUIA_SEPARACION: CategoriaGuiaSeparacion[] = [
       "Chatarra con residuos peligrosos",
       "Metales oxidados o con contaminantes tóxicos",
     ],
-    claseBadge: "bg-violet-600 dark:bg-violet-500",
+    claseBorde: "border-cyan-500/40 bg-cyan-950/20",
+    claseDot: "bg-cyan-500",
   },
 ];
 
@@ -144,11 +150,11 @@ export default function SeparacionGuia() {
         {GUIA_SEPARACION.map((categoria) => (
           <article
             key={categoria.material}
-            className="flex flex-col rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+            className={`flex flex-col rounded-2xl border p-5 shadow-sm ${categoria.claseBorde}`}
           >
             <header className="mb-3 flex items-center gap-3">
               <span
-                className={`h-3.5 w-3.5 shrink-0 rounded-full ${categoria.claseBadge}`}
+                className={`h-3.5 w-3.5 shrink-0 rounded-full ${categoria.claseDot}`}
                 aria-hidden="true"
               />
               <div>
@@ -176,7 +182,7 @@ export default function SeparacionGuia() {
                     className="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300"
                   >
                     <span
-                      className="mt-0.5 text-emerald-600 dark:text-emerald-400"
+                      className="mt-0.5 text-emerald-400 font-bold"
                       aria-hidden="true"
                     >
                       ✓
@@ -188,7 +194,7 @@ export default function SeparacionGuia() {
             </div>
 
             <div>
-              <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-red-600 dark:text-red-400">
+              <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-rose-600 dark:text-rose-400">
                 Evitar
               </h4>
               <ul className="flex flex-col gap-1.5">
@@ -198,7 +204,7 @@ export default function SeparacionGuia() {
                     className="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300"
                   >
                     <span
-                      className="mt-0.5 text-red-500 dark:text-red-400"
+                      className="mt-0.5 text-rose-400 font-bold"
                       aria-hidden="true"
                     >
                       ✕
