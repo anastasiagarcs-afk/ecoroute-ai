@@ -16,10 +16,11 @@ import {
 import { mostrarToast } from "@/lib/toastStore";
 import { obtenerSnapshotSesion, cerrarSesion } from "@/lib/authService";
 import { puede, ETIQUETAS_ROL } from "@/lib/rolesAutorizados";
+import PanelAlertas from "@/components/PanelAlertas";
 import type { RolUsuario, SolicitudAcceso, Usuario } from "@/types/schema";
 
 type SolicitudConUsuario = SolicitudAcceso & { Usuarios: Usuario };
-type TabActiva = "solicitudes" | "usuarios";
+type TabActiva = "solicitudes" | "usuarios" | "alertas";
 
 const ZONAS_PREDEFINIDAS = [
   "Alta Vista",
@@ -290,6 +291,17 @@ export default function AdminPage() {
             </span>
           )}
         </button>
+        <button
+          type="button"
+          onClick={() => setTabActiva("alertas")}
+          className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+            tabActiva === "alertas"
+              ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50"
+              : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
+          }`}
+        >
+          🔔 Alertas
+        </button>
       </div>
 
       {/* Contenido de pestañas */}
@@ -386,7 +398,7 @@ export default function AdminPage() {
             </table>
           </div>
         )
-      ) : (
+      ) : tabActiva === "usuarios" ? (
         // Pestaña de Usuarios Registrados
         cargando ? (
           <div className="flex items-center justify-center py-12">
@@ -505,6 +517,9 @@ export default function AdminPage() {
             </table>
           </div>
         )
+      ) : (
+        // Pestaña de Alertas (Admin only)
+        <PanelAlertas />
       )}
     </main>
   );

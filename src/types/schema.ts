@@ -187,6 +187,9 @@ export type Notificacion = {
   leida: boolean;
   fecha_envio: string;
   enlace: string | null;
+  atendida: boolean;
+  fecha_atencion: string | null;
+  contenedor_id: string | null;
   created_at: string;
 }
 

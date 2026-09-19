@@ -50,6 +50,49 @@ function formatearFechaRelativa(fecha: string): string {
   return `${diffDias}d`;
 }
 
+function getIconoTipo(tipo: string) {
+  switch (tipo) {
+    case "alerta_llenado":
+      return (
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-red-600 dark:text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+        </span>
+      );
+    case "alerta_predictiva":
+      return (
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-100 dark:bg-violet-900/30">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-violet-600 dark:text-violet-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+          </svg>
+        </span>
+      );
+    case "asignacion_ruta":
+      return (
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="1" y="3" width="15" height="13" />
+            <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+            <circle cx="5.5" cy="18.5" r="2.5" />
+            <circle cx="18.5" cy="18.5" r="2.5" />
+          </svg>
+        </span>
+      );
+    default:
+      return (
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-zinc-500 dark:text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+          </svg>
+        </span>
+      );
+  }
+}
+
 export default function NavRol() {
   const router = useRouter();
   const pathname = usePathname();
@@ -455,8 +498,9 @@ export default function NavRol() {
                         >
                           <div className="flex items-start gap-2">
                             {!notif.leida && (
-                              <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+                              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
                             )}
+                            {getIconoTipo(notif.tipo)}
                             <div className="flex-1 min-w-0">
                               <p className="text-xs text-zinc-700 dark:text-zinc-300">
                                 {notif.mensaje}

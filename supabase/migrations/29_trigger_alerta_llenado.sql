@@ -52,7 +52,7 @@ BEGIN
 
   -- Si no hay duplicado, insertar notificaciones para Admin y Gerente
   IF NOT v_duplicado THEN
-    INSERT INTO public."Notificaciones" (usuario_id, tipo, mensaje, leida, fecha_envio, enlace)
+    INSERT INTO public."Notificaciones" (usuario_id, tipo, mensaje, leida, fecha_envio, enlace, contenedor_id)
     SELECT
       u.id,
       'alerta_llenado',
@@ -65,7 +65,8 @@ BEGIN
       END,
       false,
       now(),
-      '/#dashboard'
+      '/#dashboard',
+      v_contenedor_id
     FROM public."Usuarios" u
     WHERE u.rol IN ('Admin', 'Gerente');
   END IF;

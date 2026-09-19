@@ -325,6 +325,9 @@ export async function guardarAlertaPredictiva(
       leida: false,
       fecha_envio: new Date().toISOString(),
       enlace: "/#dashboard",
+      atendida: false,
+      fecha_atencion: null,
+      contenedor_id: prediccion.contenedorId,
     }));
 
     const { error } = await supabase
