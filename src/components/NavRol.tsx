@@ -18,7 +18,8 @@ type NavLink = {
 
 const LINKS_POR_ROL: Record<RolUsuario, NavLink[]> = {
   Admin: [
-    { href: "/", etiqueta: "Dashboard", accion: "ver_dashboard" },
+    { href: "/", etiqueta: "Principal", accion: "ver_dashboard" },
+    { href: "/reportes", etiqueta: "Reportes", accion: "ver_reportes" },
     { href: "/admin", etiqueta: "Solicitudes", accion: "aprobar_solicitudes" },
     { href: "/separacion", etiqueta: "Separacion", accion: "separacion_residuos" },
   ],

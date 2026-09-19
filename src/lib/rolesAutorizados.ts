@@ -2,6 +2,7 @@ import type { RolUsuario } from "@/types/schema";
 
 export type AccionSistema =
   | "ver_dashboard"
+  | "ver_reportes"
   | "ver_mapa"
   | "gestionar_contenedores"
   | "vaciar_contenedor"
@@ -19,6 +20,7 @@ export type AccionSistema =
 const PERMISOS: Record<RolUsuario, AccionSistema[]> = {
   Admin: [
     "ver_dashboard",
+    "ver_reportes",
     "ver_mapa",
     "gestionar_contenedores",
     "vaciar_contenedor",

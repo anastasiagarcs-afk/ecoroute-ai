@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useSyncExternalStore } from "react";
-import DashboardGerencial from "@/components/DashboardGerencial";
+import { Archive, BarChart3, AlertTriangle } from "lucide-react";
 import HistorialOperador from "@/components/HistorialOperador";
 import NuevoContenedorModal from "@/components/NuevoContenedorModal";
 import PanelRutaOperador from "@/components/PanelRutaOperador";
@@ -139,6 +139,19 @@ export default function Home() {
 
   const contenedoresVisibles =
     estadoContenedores.estadoCarga === "cargando" ? [] : contenedores;
+
+  const totalContenedores = contenedoresVisibles.length;
+  const promedioLlenado =
+    totalContenedores > 0
+      ? Math.round(
+          (contenedoresVisibles.reduce((s, c) => s + c.nivel_llenado, 0) /
+            totalContenedores) *
+            10
+        ) / 10
+      : 0;
+  const criticosCount = contenedoresVisibles.filter(
+    (c) => c.nivel_llenado > 80
+  ).length;
 
   const datosRespaldo =
     !estaSupabaseConfigurado() || estadoContenedores.estadoCarga === "error";
@@ -477,7 +490,37 @@ export default function Home() {
         </div>
       )}
 
-      {puede(sesion.rol, "ver_dashboard") && <DashboardGerencial />}
+      {sesion.rol === "Admin" && (
+        <div className="grid grid-cols-3 gap-4">
+          <div className="flex items-center gap-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-5">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-emerald-500/20 bg-emerald-500/15 text-emerald-400">
+              <Archive className="h-6 w-6" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">{totalContenedores}</p>
+              <p className="text-sm font-medium text-zinc-400">Contenedores</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-5">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-cyan-500/20 bg-cyan-500/15 text-cyan-400">
+              <BarChart3 className="h-6 w-6" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">{promedioLlenado}%</p>
+              <p className="text-sm font-medium text-zinc-400">Promedio llenado</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-5">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-rose-500/20 bg-rose-500/15 text-rose-400">
+              <AlertTriangle className="h-6 w-6" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">{criticosCount}</p>
+              <p className="text-sm font-medium text-zinc-400">Contenedores criticos</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {sesion.rol === "Operador" ? (
         <section className={`grid w-full grid-cols-1 items-start gap-4 ${tabOperador === "rutas" ? "lg:grid-cols-[minmax(0,1fr)_380px]" : ""}`}>

@@ -1,5 +1,5 @@
 # Bitácora del Proyecto — EcoRoute AI
-> Documento generado automáticamente el 19 de septiembre de 2026 a las 04:57 p. m. por `npm run informe`. No editar a mano: se regenera desde el código para mantenerse al día.
+> Documento generado automáticamente el 19 de septiembre de 2026 a las 05:48 p. m. por `npm run informe`. No editar a mano: se regenera desde el código para mantenerse al día.
 > **Nota**: Este archivo es el registro cronológico automático. Para el informe académico formal, ver `INFORME_PROYECTO.md`.
 
 ## 1. Arquitectura y Stack Tecnológico
@@ -34,7 +34,7 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 | `src/components/GamificacionPanel.tsx` | GamificacionPanel | 179 | Panel de gamificación: puntos acumulados, nivel del ciudadano, barra de progreso y catálogo de recompensas. |
 | `src/components/HistorialOperador.tsx` | HistorialOperador | 309 | — |
 | `src/components/Map.tsx` | MapaContenedores | 442 | Mapa Leaflet interactivo: contenedores en tiempo real y polilínea de la ruta activa. |
-| `src/components/NavRol.tsx` | NavRol | 570 | — |
+| `src/components/NavRol.tsx` | NavRol | 571 | — |
 | `src/components/NotificacionesOperador.tsx` | NotificacionesOperador | 132 | — |
 | `src/components/NuevoContenedorModal.tsx` | NuevoContenedorModal | 593 | Modal para registrar nuevos contenedores (código, tipo de residuo, nivel, capacidad y coordenadas); inserta vía la función Supabase registrar_contenedor y el marcador aparece al instante en el mapa. |
 | `src/components/PanelAlertas.tsx` | PanelAlertas | 349 | — |
@@ -53,6 +53,7 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 - `/acceso` → `app/acceso/page.tsx`
 - `/admin` → `app/admin/page.tsx`
 - `/` → `app/page.tsx`
+- `/reportes` → `app/reportes/page.tsx`
 - `/separacion` → `app/separacion/page.tsx`
 
 ## 5. Lógica de negocio (`src/lib`)
@@ -71,7 +72,7 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 | `src/lib/operadoresService.ts` | 393 | — |
 | `src/lib/reciclajeService.ts` | 279 | Servicio Supabase del módulo de reciclaje: usuario ciudadano actual, registro de entregas con webhook n8n (insert PuntosReciclaje + update Usuarios) y entregas recientes. |
 | `src/lib/reporteExportador.ts` | 237 | — |
-| `src/lib/rolesAutorizados.ts` | 72 | — |
+| `src/lib/rolesAutorizados.ts` | 74 | — |
 | `src/lib/routeOptimizer.ts` | 258 | Optimización de rutas con OSRM (perfiles vehiculares y pesos) y cálculo de ruta por distancia, con fallback a línea recta. |
 | `src/lib/supabaseClient.ts` | 69 | Cliente Supabase del navegador: sanitización de variables de entorno, validación de configuración y detección del modo de respaldo. |
 | `src/lib/supabaseServer.ts` | 29 | — |
