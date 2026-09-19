@@ -91,7 +91,11 @@ function TarjetaKpi({
   );
 }
 
-export default function DashboardGerencial() {
+interface DashboardGerencialProps {
+  ocultarTitulo?: boolean;
+}
+
+export default function DashboardGerencial({ ocultarTitulo = false }: DashboardGerencialProps) {
   const sesion = useSyncExternalStore(
     () => () => {},
     obtenerSnapshotSesion,
@@ -249,14 +253,16 @@ export default function DashboardGerencial() {
   return (
     <section className="flex flex-col gap-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2 className="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Dashboard Gerencial
-          </h2>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            Indicadores clave de recolección y estado de contenedores
-          </p>
-        </div>
+        {!ocultarTitulo && (
+          <div>
+            <h2 className="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+              Reportes
+            </h2>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              Indicadores clave de recolección y estado de contenedores
+            </p>
+          </div>
+        )}
         <div className="flex flex-wrap items-end gap-2">
           <label className="flex flex-col gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
             Zona

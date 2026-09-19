@@ -24,7 +24,7 @@ const LINKS_POR_ROL: Record<RolUsuario, NavLink[]> = {
     { href: "/separacion", etiqueta: "Separacion", accion: "separacion_residuos" },
   ],
   Gerente: [
-    { href: "/", etiqueta: "Dashboard", accion: "ver_dashboard" },
+    { href: "/", etiqueta: "Principal", accion: "ver_dashboard" },
     { href: "/separacion", etiqueta: "Separacion", accion: "separacion_residuos" },
   ],
   Operador: [

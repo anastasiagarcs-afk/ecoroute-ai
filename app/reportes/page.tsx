@@ -44,7 +44,7 @@ export default function ReportesPage() {
           Metricas globales, analisis predictivo y exportacion de datos
         </p>
       </header>
-      <DashboardGerencial />
+      <DashboardGerencial ocultarTitulo />
     </div>
   );
 }

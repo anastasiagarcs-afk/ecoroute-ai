@@ -5,6 +5,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useSyncExternalStore } from "react";
 import { Archive, BarChart3, AlertTriangle } from "lucide-react";
+import DashboardGerencial from "@/components/DashboardGerencial";
 import HistorialOperador from "@/components/HistorialOperador";
 import NuevoContenedorModal from "@/components/NuevoContenedorModal";
 import PanelRutaOperador from "@/components/PanelRutaOperador";
@@ -400,7 +401,7 @@ export default function Home() {
               : sesion.rol === "Operador"
                 ? "Mapa y Rutas"
                 : sesion.rol === "Gerente"
-                  ? "Dashboard Gerencial"
+                  ? "Panel Gerencial"
                   : "EcoRoute AI"}
           </h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
@@ -522,7 +523,47 @@ export default function Home() {
         </div>
       )}
 
-      {sesion.rol === "Operador" ? (
+      {sesion.rol === "Gerente" && (
+        <>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="flex items-center gap-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-5">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-emerald-500/20 bg-emerald-500/15 text-emerald-400">
+                <Archive className="h-6 w-6" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">{totalContenedores}</p>
+                <p className="text-sm font-medium text-zinc-400">Contenedores</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-5">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-cyan-500/20 bg-cyan-500/15 text-cyan-400">
+                <BarChart3 className="h-6 w-6" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">{promedioLlenado}%</p>
+                <p className="text-sm font-medium text-zinc-400">Promedio llenado</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-5">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-rose-500/20 bg-rose-500/15 text-rose-400">
+                <AlertTriangle className="h-6 w-6" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">{criticosCount}</p>
+                <p className="text-sm font-medium text-zinc-400">Contenedores criticos</p>
+              </div>
+            </div>
+          </div>
+
+          <section className="flex flex-1 justify-center">
+            <RoutesMapView contenedores={contenedoresVisibles} centro={CENTRO_CIUDAD} rol={sesion.rol} />
+          </section>
+
+          <DashboardGerencial />
+        </>
+      )}
+
+      {sesion.rol === "Operador" && (
         <section className={`grid w-full grid-cols-1 items-start gap-4 ${tabOperador === "rutas" ? "lg:grid-cols-[minmax(0,1fr)_380px]" : ""}`}>
           {tabOperador === "rutas" && (
             <div className="relative h-[60vh] w-full overflow-hidden rounded-2xl border border-zinc-200 shadow-sm dark:border-zinc-800 lg:h-[65vh]">
@@ -668,7 +709,9 @@ export default function Home() {
             )}
           </div>
         </section>
-      ) : (
+      )}
+
+      {sesion.rol !== "Operador" && sesion.rol !== "Gerente" && (
         <section className="flex flex-1 justify-center">
           <RoutesMapView contenedores={contenedoresVisibles} centro={CENTRO_CIUDAD} rol={sesion.rol} />
         </section>
