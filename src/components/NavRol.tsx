@@ -165,11 +165,14 @@ export default function NavRol() {
 
     console.log("[NavRol] Notificaciones cargadas:", data?.length ?? 0, data);
     setNotificaciones(data ? (data as Notificacion[]) : []);
-  }, [sesion, obtenerUsuarioId]);
+  }, [obtenerUsuarioId]);
 
   const cargarNotificacionesRef = useRef(cargarNotificaciones);
-  cargarNotificacionesRef.current = cargarNotificaciones;
   const timerReintentoRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    cargarNotificacionesRef.current = cargarNotificaciones;
+  }, [cargarNotificaciones]);
 
   useEffect(() => {
     cargarNotificacionesRef.current();
@@ -464,7 +467,7 @@ export default function NavRol() {
           </button>
 
           {popoverAbierto && (
-            <div className="absolute right-0 top-full z-[9999] mt-2 w-80 rounded-xl border border-zinc-200 bg-white shadow-xl dark:border-zinc-700 dark:bg-zinc-900">
+            <div className="absolute right-0 top-full z-9999 mt-2 w-80 rounded-xl border border-zinc-200 bg-white shadow-xl dark:border-zinc-700 dark:bg-zinc-900">
               <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-2.5 dark:border-zinc-700">
                 <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
                   Notificaciones
