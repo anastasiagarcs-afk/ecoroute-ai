@@ -20,6 +20,7 @@ const LINKS_POR_ROL: Record<RolUsuario, NavLink[]> = {
   Admin: [
     { href: "/", etiqueta: "Principal", accion: "ver_dashboard" },
     { href: "/reportes", etiqueta: "Reportes", accion: "ver_reportes" },
+    { href: "/anomalias", etiqueta: "Anomalias", accion: "ver_anomalias" },
     { href: "/admin", etiqueta: "Solicitudes", accion: "aprobar_solicitudes" },
     { href: "/separacion", etiqueta: "EcoCiudadano", accion: "separacion_residuos" },
   ],

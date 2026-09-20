@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { obtenerSnapshotSesion, suscribirseASesion } from "@/lib/authService";
 
 const INTERVALO_MS = 10_000;
 
-export default function SimuladorSensores() {
+function SimuladorInterno() {
   const [activo, setActivo] = useState(false);
   const [ultimaEjecucion, setUltimaEjecucion] = useState<string | null>(null);
   const [ejecutando, setEjecutando] = useState(false);
@@ -76,4 +77,14 @@ export default function SimuladorSensores() {
       </div>
     </div>
   );
+}
+
+export default function SimuladorSensores() {
+  const sesion = useSyncExternalStore(
+    suscribirseASesion,
+    obtenerSnapshotSesion,
+    () => null
+  );
+  if (!sesion || sesion.rol !== "Gerente") return null;
+  return <SimuladorInterno />;
 }

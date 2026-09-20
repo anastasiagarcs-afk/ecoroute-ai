@@ -4,7 +4,6 @@ import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import AnomaliasPanel from "@/components/AnomaliasPanel";
 import HistorialAnomalias from "@/components/HistorialAnomalias";
-import SimuladorSensores from "@/components/SimuladorSensores";
 import { obtenerSnapshotSesion } from "@/lib/authService";
 import { puede } from "@/lib/rolesAutorizados";
 
@@ -47,7 +46,6 @@ export default function AnomaliasPage() {
             Monitoreo de sensores, baterías y temperatura en tiempo real
           </p>
         </div>
-        <SimuladorSensores />
       </header>
       <AnomaliasPanel />
       <HistorialAnomalias />

@@ -525,36 +525,6 @@ export default function Home() {
 
       {sesion.rol === "Gerente" && (
         <>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="flex items-center gap-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-5">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-emerald-500/20 bg-emerald-500/15 text-emerald-400">
-                <Archive className="h-6 w-6" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">{totalContenedores}</p>
-                <p className="text-sm font-medium text-zinc-400">Contenedores</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-5">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-cyan-500/20 bg-cyan-500/15 text-cyan-400">
-                <BarChart3 className="h-6 w-6" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">{promedioLlenado}%</p>
-                <p className="text-sm font-medium text-zinc-400">Promedio llenado</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-5">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-rose-500/20 bg-rose-500/15 text-rose-400">
-                <AlertTriangle className="h-6 w-6" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">{criticosCount}</p>
-                <p className="text-sm font-medium text-zinc-400">Contenedores criticos</p>
-              </div>
-            </div>
-          </div>
-
           <section className="flex flex-1 justify-center">
             <RoutesMapView contenedores={contenedoresVisibles} centro={CENTRO_CIUDAD} rol={sesion.rol} />
           </section>
