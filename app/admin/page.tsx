@@ -2,7 +2,6 @@
 
 import { useSyncExternalStore, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   listarSolicitudesPendientes,
   aprobarSolicitud,
@@ -14,7 +13,7 @@ import {
   eliminarUsuario,
 } from "@/lib/adminService";
 import { mostrarToast } from "@/lib/toastStore";
-import { obtenerSnapshotSesion, cerrarSesion } from "@/lib/authService";
+import { obtenerSnapshotSesion } from "@/lib/authService";
 import { puede, ETIQUETAS_ROL } from "@/lib/rolesAutorizados";
 import { ZONAS_PREDEFINIDAS } from "@/lib/zonas";
 import PanelAlertas from "@/components/PanelAlertas";
@@ -38,7 +37,6 @@ const PRIORIDAD_ROL: Record<RolUsuario, number> = {
 };
 
 export default function AdminPage() {
-  const router = useRouter();
   const sesion = useSyncExternalStore(
     () => () => {},
     obtenerSnapshotSesion,
@@ -221,7 +219,7 @@ export default function AdminPage() {
 
   return (
     <main className="flex min-h-screen flex-col gap-6 p-4 sm:p-6 lg:p-10">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <header className="flex flex-col gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
             Gestion de Usuarios
@@ -229,24 +227,6 @@ export default function AdminPage() {
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
             Administrar solicitudes de acceso y cuentas de usuarios
           </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 rounded-full bg-zinc-900 px-3 py-1 text-xs font-medium text-zinc-50 transition-colors hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
-          >
-            ← Volver al dashboard
-          </Link>
-          <button
-            type="button"
-            onClick={async () => {
-              await cerrarSesion();
-              router.push("/acceso");
-            }}
-            className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20 transition-colors hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
-          >
-            Cerrar sesion
-          </button>
         </div>
       </header>
 

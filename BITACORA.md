@@ -1,5 +1,5 @@
 # Bitácora del Proyecto — EcoRoute AI
-> Documento generado automáticamente el 19 de septiembre de 2026 a las 10:09 p. m. por `npm run informe`. No editar a mano: se regenera desde el código para mantenerse al día.
+> Documento generado automáticamente el 20 de septiembre de 2026 a las 05:59 a. m. por `npm run informe`. No editar a mano: se regenera desde el código para mantenerse al día.
 > **Nota**: Este archivo es el registro cronológico automático. Para el informe académico formal, ver `INFORME_PROYECTO.md`.
 
 ## 1. Arquitectura y Stack Tecnológico
@@ -40,7 +40,7 @@ Flujo general: el cliente (navegador) usa `@supabase/ssr` con la clave anónima;
 | `src/components/HistorialAnomalias.tsx` | HistorialAnomalias | 253 | Historial de anomalías con filtros por tipo, severidad y rango de fechas; incluye exportación CSV. |
 | `src/components/HistorialOperador.tsx` | HistorialOperador | 309 | Panel dual del operador: columnas de jornadas (parciales/finales) y rutas completadas, con detalle expandible. |
 | `src/components/Map.tsx` | MapaContenedores | 442 | Mapa Leaflet interactivo: contenedores en tiempo real y polilínea de la ruta activa. |
-| `src/components/NavRol.tsx` | NavRol | 572 | Navegación por pestañas dinámica según el rol del usuario y permisos definidos en rolesAutorizados.ts. |
+| `src/components/NavRol.tsx` | NavRol | 575 | Navegación por pestañas dinámica según el rol del usuario y permisos definidos en rolesAutorizados.ts. |
 | `src/components/NotificacionesOperador.tsx` | NotificacionesOperador | 132 | Campanita de notificaciones en tiempo real con dropdown de alertas y lectura. |
 | `src/components/NuevoContenedorModal.tsx` | NuevoContenedorModal | 593 | Modal para registrar nuevos contenedores (código, tipo de residuo, nivel, capacidad y coordenadas); inserta vía la función Supabase registrar_contenedor y el marcador aparece al instante en el mapa. |
 | `src/components/PanelAlertas.tsx` | PanelAlertas | 349 | Panel de administración de alertas: filtros, resolución, envío a n8n y acciones sobre alertas. |
