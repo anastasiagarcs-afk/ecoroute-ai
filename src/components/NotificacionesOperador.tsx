@@ -29,13 +29,10 @@ export default function NotificacionesOperador({
   usuarioId,
 }: NotificacionesOperadorProps) {
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
-  const [cargando, setCargando] = useState(true);
+  const [cargando, setCargando] = useState(() => estaSupabaseConfigurado());
 
   useEffect(() => {
-    if (!estaSupabaseConfigurado()) {
-      setCargando(false);
-      return;
-    }
+    if (!estaSupabaseConfigurado()) return;
 
     const supabase = getSupabaseClient();
     supabase

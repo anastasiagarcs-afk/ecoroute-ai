@@ -65,21 +65,19 @@ export default function AdminPage() {
     return () => { activo = false; };
   }, [puedeAdministrar]);
 
-  // Cargar usuarios cuando se selecciona la pestaña
   useEffect(() => {
-    if (tabActiva === "usuarios" && puedeAdministrar) {
-      cargarUsuarios();
-    }
+    if (tabActiva !== "usuarios" || !puedeAdministrar) return;
+    let activo = true;
+    (async () => {
+      setCargando(true);
+      const resultado = await listarUsuarios();
+      if (activo && resultado.exito && resultado.datos) {
+        setUsuarios(resultado.datos);
+      }
+      if (activo) setCargando(false);
+    })();
+    return () => { activo = false; };
   }, [tabActiva, puedeAdministrar]);
-
-  async function cargarUsuarios() {
-    setCargando(true);
-    const resultado = await listarUsuarios();
-    if (resultado.exito && resultado.datos) {
-      setUsuarios(resultado.datos);
-    }
-    setCargando(false);
-  }
 
   async function manejarDecision(solicitudId: string, aprobar: boolean, rolAsignado?: RolUsuario) {
     setProcesando(solicitudId);

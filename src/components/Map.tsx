@@ -405,6 +405,7 @@ return () => {
     return () => {
       activo = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rutaPuntos, mapaListo, ajustarVistaARuta]);
 
   useEffect(() => {

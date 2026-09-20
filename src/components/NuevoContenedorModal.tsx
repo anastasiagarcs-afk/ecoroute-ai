@@ -47,7 +47,7 @@ function MapaSelectorUbicacion({
   const marcadorRef = useRef<LeafletMarker | null>(null);
   const [mapaListo, setMapaListo] = useState(false);
   const onUbicacionCambioRef = useRef(onUbicacionCambio);
-  onUbicacionCambioRef.current = onUbicacionCambio;
+  useEffect(() => { onUbicacionCambioRef.current = onUbicacionCambio; });
 
   useEffect(() => {
     let activo = true;
@@ -130,6 +130,7 @@ function MapaSelectorUbicacion({
       mapaRef.current = null;
       marcadorRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

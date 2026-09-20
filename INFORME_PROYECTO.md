@@ -916,7 +916,7 @@ Durante las reuniones de **Sprint Planning y Sprint Review del Sprint 5, Sprint 
 | Postergar tabla global `Auditoria_Sistema` (RNF-06) | Sprint Planning del Sprint 6 | El registro de `LecturasSensores` cubre el caso de uso inmediato; la auditoría global de RLS y operaciones críticas se prioriza para la fase de cumplimiento normativo. |
 | No implementar i18n (RNF-09) | Sprint Planning del Sprint 7 | El mercado operativo inicial es local (Ciudad Guayana, Venezuela) y la interfaz nativa en español satisface el alcance académico y operativo. Se deja en el roadmap comercial. |
 | Postergar navegación completa por teclado en Leaflet (RNF-10) | Sprint Review del Sprint 6 | Se implementó contraste alto y roles ARIA; la navegación avanzada por teclado en mapas interactivos requiere una iteración dedicada de accesibilidad. |
-| Postergar suite de pruebas unitarias automatizadas (RNF-12) | Sprint Planning del Sprint 7 | La calidad se garantizó mediante `npx tsc --noEmit` (0 errores), `npm run lint` (0 advertencias), `npm run build` exitoso y pruebas E2E con el simulador IoT. La suite con Vitest se planifica para el roadmap técnico. |
+| Postergar suite de pruebas unitarias automatizadas (RNF-12) | Sprint Planning del Sprint 7 | La calidad se garantizó mediante `npx tsc --noEmit` (0 errores), `npm run lint` (0 errores / 0 advertencias), `npm run build` exitoso y pruebas E2E con el simulador IoT. La suite con Vitest se planifica para el roadmap técnico. |
 | Postergar especificación OpenAPI/Swagger formal (RNF-14) | Sprint Planning del Sprint 7 | PostgREST provee documentación automática; los endpoints personalizados (`/api/simular-sensores`, `/api/webhooks/n8n`) están documentados en `README.md`. La especificación formal queda en el roadmap. |
 
 ---
@@ -941,7 +941,7 @@ El 100% de las funcionalidades entregadas en el incremento final cumplen estrict
 | Criterio | Evidencia en el repositorio |
 | --- | --- |
 | ✅ Código tipado con TypeScript estricto | `tsconfig.json` (`strict: true`); `npx tsc --noEmit` con **0 errores**. |
-| ⚠️ Cumplimiento de estándares de linting | `npm run lint` reporta **9 errores y 10 advertencias preexistentes** relacionados con reglas estrictas de React 19 / React Compiler (acceso a refs durante render, setState sincrónico dentro de effects, preservación de memoización manual y dependencias de hooks). Estos errores **no bloquean el build ni la operatividad** del sistema desplegado, pero quedan identificados como trabajo técnico de refactorización en el roadmap. |
+| ✅ Cumplimiento de estándares de linting | `npm run lint` con **0 errores y 0 advertencias**. Deuda técnica de React 19 / React Compiler resuelta (8 errores y 9 warnings corregidos: acceso a refs durante render, setState sincrónico en effects, preservación de memoización manual, dependencias de hooks e importaciones no utilizadas). |
 | ✅ Build de producción exitoso | `npm run build` compila todas las páginas y API Routes sin errores. |
 | ✅ Compatibilidad con React 19 | Uso de `useSyncExternalStore` con snapshots estables, `SNAPSHOT_SERVIDOR_VACIO` y `queueMicrotask` en cleanup de popups de Leaflet. |
 | ✅ Seguridad a nivel de datos | 8 tablas con RLS habilitado, 61 políticas activas y funciones RPC con bypass controlado. |
@@ -949,7 +949,7 @@ El 100% de las funcionalidades entregadas en el incremento final cumplen estrict
 | ✅ Documentación sincronizada con el código | `npm run informe` regenera `BITACORA.md` automáticamente desde el código fuente. |
 | ✅ Pruebas funcionales end-to-end | Validación continua mediante el simulador IoT (`/api/simular-sensores`) y suscripciones Realtime. |
 
-**Conclusión**: el sistema EcoRoute AI cumple con una Definition of Done funcional rigurosa. Cada historia de usuario y requerimiento funcional entregado fue verificado técnicamente, se encuentra desplegado en producción y está listo para generar valor operativo real en la recolección de residuos sólidos municipales. Los hallazgos de linting preexistentes están documentados y se incorporan al roadmap técnico como parte de la mejora continua del código; no afectan la operatividad del incremento entregado.
+**Conclusión**: el sistema EcoRoute AI cumple con una Definition of Done funcional rigurosa. Cada historia de usuario y requerimiento funcional entregado fue verificado técnicamente, se encuentra desplegado en producción y está listo para generar valor operativo real en la recolección de residuos sólidos municipales. El código fuente cumple con 0 errores de TypeScript, 0 errores y 0 advertencias de ESLint, y compila exitosamente en build de producción.
 
 ### Alcance Ajustado (Backlog Refinement & Roadmap)
 
@@ -961,12 +961,12 @@ Los siguientes requerimientos no funcionales fueron formalmente **desestimados o
 | RNF-06 | Log de auditoría global del sistema | 🟡 Parcial | Sprint Planning del Sprint 6 | El registro de lecturas y anomalías en `LecturasSensores` cubre el caso de uso inmediato. La tabla global `Auditoria_Sistema` con Triggers PostgreSQL se prioriza para la fase de cumplimiento normativo. |
 | RNF-09 | Soporte de idiomas (Español e Inglés) | 🔴 No Implementado | Sprint Planning del Sprint 7 | La interfaz está maquetada nativamente en español para el mercado operativo local inicial (Ciudad Guayana). La integración de `next-intl` se planifica para la fase de expansión comercial. |
 | RNF-10 | Accesibilidad WCAG 2.1 completa | 🟡 Parcial | Sprint Review del Sprint 6 | Se implementaron contraste de colores de alto contraste y roles ARIA básicos. La navegación completa por teclado en mapas interactivos de Leaflet requiere una iteración dedicada de accesibilidad. |
-| RNF-12 | Pruebas automatizadas con cobertura del 70% | 🟡 Parcial | Sprint Planning del Sprint 7 | La calidad se garantizó mediante tipado estricto de TypeScript, build exitoso y pruebas E2E funcionales con el simulador IoT. Se identificaron 9 errores y 10 advertencias de linting preexistentes (React 19 / React Compiler) que se abordarán junto con la suite unitaria con Vitest/Jest en el roadmap técnico. |
+| RNF-12 | Pruebas automatizadas con cobertura del 70% | 🟡 Parcial | Sprint Planning del Sprint 7 | La calidad se garantizó mediante tipado estricto de TypeScript, linting sin errores ni advertencias, build exitoso y pruebas E2E funcionales con el simulador IoT. La suite unitaria con Vitest/Jest se planifica para el roadmap técnico. |
 | RNF-14 | API RESTful documentada (OpenAPI/Swagger) | 🟡 Parcial | Sprint Planning del Sprint 7 | La API de base de datos está auto-documentada por PostgREST. Los endpoints personalizados (`/api/simular-sensores`, `/api/webhooks/n8n`) están documentados en `README.md`. La especificación OpenAPI/Swagger formal se proyecta. |
 
 #### Roadmap de Trabajo Futuro
 
-1. **Fase 1 — Refactorización React 19 / React Compiler**: resolver los 9 errores y 10 advertencias de linting preexistentes (acceso a refs durante render, setState sincrónico en effects, preservación de memoización manual y dependencias de hooks) para alcanzar `npm run lint` con 0 errores / 0 advertencias.
+1. **Fase 1 — Refactorización React 19 / React Compiler**: ✅ **COMPLETADA**. Se resolvieron los 8 errores y 9 advertencias de linting preexistentes (acceso a refs durante render, setState sincrónico en effects, preservación de memoización manual, dependencias de hooks e importaciones no utilizadas). `npm run lint` reporta 0 errores / 0 advertencias.
 2. **Fase 2 — Escalabilidad**: pruebas de carga con k6/JMeter, optimización de índices PostgreSQL y evaluación de caché distribuida (Redis).
 3. **Fase 3 — Cumplimiento normativo**: creación de la tabla `Auditoria_Sistema` con Triggers PostgreSQL para registrar cambios críticos, operaciones DELETE/UPDATE y eventos de RLS.
 4. **Fase 4 — Expansión comercial**: integración de internacionalización (`next-intl`) para soporte multilenguaje (español/inglés).

@@ -1,4 +1,4 @@
-import type { Contenedor, TipoResiduo } from "@/types/schema";
+import type { Contenedor } from "@/types/schema";
 import type { RegistroHistorialRuta } from "@/lib/historialRutas";
 
 export const ETIQUETA_TIPO_RESIDUO: Record<string, string> = {
@@ -33,7 +33,6 @@ function filaCSV(campos: Array<string | number | null>): string {
 
 function nombreArchivo(base: string, extension: string, filtros: FiltrosExportacion): string {
   const zona = filtros.zona === "Todas" ? "todas" : filtros.zona.toLowerCase().replace(/\s+/g, "-");
-  const fecha = new Date().toISOString().slice(0, 10);
   return `reporte-${base}-${zona}.${extension}`;
 }
 

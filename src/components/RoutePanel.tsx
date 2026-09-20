@@ -113,7 +113,7 @@ export default function RoutePanel({
 
   const [operadores, setOperadores] = useState<Usuario[]>([]);
   const [operadorSeleccionado, setOperadorSeleccionado] = useState<string>("");
-  const [rutaIdGuardada, setRutaIdGuardada] = useState<string | null>(null);
+  const [, setRutaIdGuardada] = useState<string | null>(null);
   const [mensajeConfirmacion, setMensajeConfirmacion] = useState<string>("");
 
   const [rutasGuardadas, setRutasGuardadas] = useState<Ruta[]>([]);
@@ -664,7 +664,7 @@ export default function RoutePanel({
               {rutaGuardadaSeleccionada && (
                 <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-900/50 dark:bg-blue-950/30">
                   <label className="text-xs font-semibold text-blue-900 dark:text-blue-100">
-                    Asignar "{rutaGuardadaSeleccionada.nombre}" a Operador
+                    Asignar &ldquo;{rutaGuardadaSeleccionada.nombre}&rdquo; a Operador
                   </label>
                   <select
                     value={operadorSeleccionado}

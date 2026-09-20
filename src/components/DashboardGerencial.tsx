@@ -19,7 +19,6 @@ import {
 import {
   descargarCSV,
   imprimirReporte,
-  type FiltrosExportacion,
 } from "@/lib/reporteExportador";
 import type { Contenedor } from "@/types/schema";
 
@@ -157,10 +156,7 @@ export default function DashboardGerencial({ ocultarTitulo = false }: DashboardG
     setFechaHasta("");
   };
 
-  const contenedoresFiltrados = useMemo(() => {
-    if (zonaSeleccionada === "Todas") return contenedores;
-    return contenedores.filter((contenedor) => contenedor.zona === zonaSeleccionada);
-  }, [contenedores, zonaSeleccionada]);
+  const contenedoresFiltrados = zonaSeleccionada === "Todas" ? contenedores : contenedores.filter((contenedor) => contenedor.zona === zonaSeleccionada);
 
   const idsZona = useMemo(() => {
     if (zonaSeleccionada === "Todas") return null;

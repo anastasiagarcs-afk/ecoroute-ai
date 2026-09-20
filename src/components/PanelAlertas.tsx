@@ -79,9 +79,20 @@ export default function PanelAlertas() {
 
   useEffect(() => {
     canceladoRef.current = false;
-    cargarAlertas();
+    (async () => {
+      if (!estaSupabaseConfigurado()) {
+        setAlertas([]);
+        setCargando(false);
+        return;
+      }
+      const data = await obtenerAlertasGlobales();
+      if (!canceladoRef.current) {
+        setAlertas(data);
+        setCargando(false);
+      }
+    })();
     return () => { canceladoRef.current = true; };
-  }, [cargarAlertas]);
+  }, []);
 
   // Realtime subscription
   useEffect(() => {

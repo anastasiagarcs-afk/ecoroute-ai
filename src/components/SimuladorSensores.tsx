@@ -31,8 +31,15 @@ function SimuladorInterno() {
 
   useEffect(() => {
     if (activo) {
-      void ejecutarSimulacion();
+      const timeoutId = setTimeout(() => { void ejecutarSimulacion(); }, 0);
       intervalRef.current = setInterval(ejecutarSimulacion, INTERVALO_MS);
+      return () => {
+        clearTimeout(timeoutId);
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      };
     } else {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);

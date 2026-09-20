@@ -36,8 +36,7 @@ export async function obtenerAlertasGlobales(): Promise<AlertaConContenedor[]> {
   // Phase 2: map results, extract container code for alerts without contenedor_id
   const alertas: AlertaConContenedor[] = data.map((row: Record<string, unknown>) => {
     const c = row.Contenedores as { id: string; nivel_llenado: number; numero_identificacion: string } | null;
-    const { Contenedores: _removed, ...rest } = row;
-    const notif = rest as Notificacion;
+    const notif = Object.fromEntries(Object.entries(row).filter(([k]) => k !== "Contenedores")) as Notificacion;
 
     return {
       ...notif,

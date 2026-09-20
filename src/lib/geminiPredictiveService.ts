@@ -279,10 +279,6 @@ export async function analizarContenedor(
   };
 }
 
-function nivelesEnRango(nivel: number): boolean {
-  return nivel < NIVEL_UMBRAL_PREDICCION || nivel >= NIVEL_UMBRAL_PREDICCION;
-}
-
 export async function analizarContenedores(
   contenedores: Contenedor[]
 ): Promise<PrediccionContenedor[]> {
